@@ -56,29 +56,28 @@ class Window(QtGui.QMainWindow):
         self.comboCrypt = QtGui.QComboBox(self.centralWidget)  # Left side.
         self.postProcess = QtGui.QComboBox(self.centralWidget) # Left side.
         self.linePasswordL = QtGui.QLineEdit(self.centralWidget) # Left side.
-        self.buttonLGo = QtGui.QPushButton('Encrypt!', self.centralWidget)
+        self.labelPwdL = QtGui.QLabel('<- Pwd', self.centralWidget) # Left side.
 
         self.preDecrypt = QtGui.QComboBox(self.centralWidget)    # Right side.
         self.comboDecrypt = QtGui.QComboBox(self.centralWidget)  # Right side.
         self.postDecrypt = QtGui.QComboBox(self.centralWidget)   # Right side.
         self.linePasswordR = QtGui.QLineEdit(self.centralWidget) # Right side.
-        self.buttonRGo = QtGui.QPushButton('Decrypt!', self.centralWidget)
+        self.labelPwdR = QtGui.QLabel('<- Pwd', self.centralWidget) # Right side.
 
         self.layout.addWidget(self.buttonCryptMode, 1, 1, 1, 5)
         self.layout.addWidget(self.buttonDecryptMode, 1, 6, 1, 5)
 
-        self.layout.addWidget(self.linePasswordL, 2, 1, 1, 4)
-        self.layout.addWidget(self.buttonLGo, 2, 5, 1, 1)
-        self.layout.addWidget(self.linePasswordR, 2, 6, 1, 4)
-        self.layout.addWidget(self.buttonRGo, 2, 10, 1, 1)
+        self.layout.addWidget(self.preProcess, 2, 1, 1, 1)
+        self.layout.addWidget(self.comboCrypt, 2, 2, 1, 1)
+        self.layout.addWidget(self.postProcess, 2, 3, 1, 1)
+        self.layout.addWidget(self.preDecrypt, 2, 6, 1, 1)
+        self.layout.addWidget(self.comboDecrypt, 2, 7, 1, 1)
+        self.layout.addWidget(self.postDecrypt, 2, 8, 1, 1)
 
-        self.layout.addWidget(self.preProcess, 3, 1, 1, 1)
-        self.layout.addWidget(self.comboCrypt, 3, 2, 1, 1)
-        self.layout.addWidget(self.postProcess, 3, 3, 1, 1)
-
-        self.layout.addWidget(self.preDecrypt, 3, 6, 1, 1)
-        self.layout.addWidget(self.comboDecrypt, 3, 7, 1, 1)
-        self.layout.addWidget(self.postDecrypt, 3, 8, 1, 1)
+        self.layout.addWidget(self.linePasswordL, 3, 1, 1, 4)
+        self.layout.addWidget(self.labelPwdL, 3, 5, 1, 1)
+        self.layout.addWidget(self.linePasswordR, 3, 6, 1, 4)
+        self.layout.addWidget(self.labelPwdR, 3, 10, 1, 1)
 
         self.layout.addWidget(self.leftText, 5, 1, 10, 5)
         self.layout.addWidget(self.rightText, 5, 6, 10, 5)
@@ -91,9 +90,6 @@ class Window(QtGui.QMainWindow):
         Setup all components.
         '''
         #
-        self.buttonRGo.setDisabled(True)
-        self.rightText.setReadOnly(True)
-        #
         # Toogle buttons.
         self.buttonCryptMode.setCheckable(True)
         self.buttonCryptMode.setChecked(True)
@@ -103,10 +99,10 @@ class Window(QtGui.QMainWindow):
         #
         # Password fields.
         #self.linePasswordL.setEchoMode(QtGui.QLineEdit.Password)
-        self.linePasswordL.setToolTip('Type password here; it will be used for encrypting the text')
+        self.linePasswordL.setToolTip('Password used for encrypting the text')
         self.linePasswordL.setMaxLength(99)
         #self.linePasswordR.setEchoMode(QtGui.QLineEdit.Password)
-        self.linePasswordR.setToolTip('Password for decrypting the text')
+        self.linePasswordR.setToolTip('Password used for decrypting the text')
         self.linePasswordR.setMaxLength(99)
         self.linePasswordR.setDisabled(True)
         #
@@ -145,12 +141,10 @@ class Window(QtGui.QMainWindow):
         self.rightText.textChanged.connect(self.onRightTextChanged)
         self.buttonDecryptMode.clicked.connect(self.onDecryptMode)
         #
-        self.buttonLGo.clicked.connect(self.onLeftTextChanged)
         self.preProcess.currentIndexChanged.connect(self.onLeftTextChanged)
         self.comboCrypt.currentIndexChanged.connect(self.onLeftTextChanged)
         self.postProcess.currentIndexChanged.connect(self.onLeftTextChanged)
         #
-        self.buttonRGo.clicked.connect(self.onRightTextChanged)
         self.preDecrypt.currentIndexChanged.connect(self.onRightTextChanged)
         self.comboDecrypt.currentIndexChanged.connect(self.onRightTextChanged)
         self.postDecrypt.currentIndexChanged.connect(self.onRightTextChanged)
@@ -160,9 +154,6 @@ class Window(QtGui.QMainWindow):
         #
         self.buttonCryptMode.setChecked(True)
         self.buttonDecryptMode.setChecked(False)
-        #
-        self.buttonLGo.setDisabled(False)
-        self.buttonRGo.setDisabled(True)
         #
         self.linePasswordL.setDisabled(False)
         self.leftText.setReadOnly(False)
@@ -178,9 +169,6 @@ class Window(QtGui.QMainWindow):
         #
         self.buttonCryptMode.setChecked(False)
         self.buttonDecryptMode.setChecked(True)
-        #
-        self.buttonLGo.setDisabled(True)
-        self.buttonRGo.setDisabled(False)
         #
         self.linePasswordL.setDisabled(True)
         self.leftText.setReadOnly(True)
