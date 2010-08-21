@@ -56,13 +56,13 @@ class Window(QtGui.QMainWindow):
         self.comboCrypt = QtGui.QComboBox(self.centralWidget)  # Left side.
         self.postProcess = QtGui.QComboBox(self.centralWidget) # Left side.
         self.linePasswordL = QtGui.QLineEdit(self.centralWidget) # Left side.
-        self.labelPwdL = QtGui.QLabel('<- Pwd', self.centralWidget) # Left side.
+        self.checkPwdL = QtGui.QCheckBox('<- Pwd', self.centralWidget) # Left side.
 
         self.preDecrypt = QtGui.QComboBox(self.centralWidget)    # Right side.
         self.comboDecrypt = QtGui.QComboBox(self.centralWidget)  # Right side.
         self.postDecrypt = QtGui.QComboBox(self.centralWidget)   # Right side.
         self.linePasswordR = QtGui.QLineEdit(self.centralWidget) # Right side.
-        self.labelPwdR = QtGui.QLabel('<- Pwd', self.centralWidget) # Right side.
+        self.checkPwdR = QtGui.QCheckBox('<- Pwd', self.centralWidget) # Right side.
 
         self.layout.addWidget(self.buttonCryptMode, 1, 1, 1, 5)
         self.layout.addWidget(self.buttonDecryptMode, 1, 6, 1, 5)
@@ -75,9 +75,9 @@ class Window(QtGui.QMainWindow):
         self.layout.addWidget(self.postDecrypt, 2, 8, 1, 1)
 
         self.layout.addWidget(self.linePasswordL, 3, 1, 1, 4)
-        self.layout.addWidget(self.labelPwdL, 3, 5, 1, 1)
+        self.layout.addWidget(self.checkPwdL, 3, 5, 1, 1)
         self.layout.addWidget(self.linePasswordR, 3, 6, 1, 4)
-        self.layout.addWidget(self.labelPwdR, 3, 10, 1, 1)
+        self.layout.addWidget(self.checkPwdR, 3, 10, 1, 1)
 
         self.layout.addWidget(self.leftText, 5, 1, 10, 5)
         self.layout.addWidget(self.rightText, 5, 6, 10, 5)
@@ -98,13 +98,15 @@ class Window(QtGui.QMainWindow):
         self.buttonDecryptMode.setToolTip('Switch to Decryption mode')
         #
         # Password fields.
-        #self.linePasswordL.setEchoMode(QtGui.QLineEdit.Password)
+        self.linePasswordL.setEchoMode(QtGui.QLineEdit.Password)
         self.linePasswordL.setToolTip('Password used for encrypting the text')
         self.linePasswordL.setMaxLength(99)
-        #self.linePasswordR.setEchoMode(QtGui.QLineEdit.Password)
+        self.checkPwdL.setTristate(False)
+        self.linePasswordR.setEchoMode(QtGui.QLineEdit.Password)
         self.linePasswordR.setToolTip('Password used for decrypting the text')
         self.linePasswordR.setMaxLength(99)
         self.linePasswordR.setDisabled(True)
+        self.checkPwdR.setTristate(False)
         #
         # Pre combo-boxes.
         self.preProcess.setToolTip('Select pre-process')
@@ -135,10 +137,12 @@ class Window(QtGui.QMainWindow):
         #
         self.linePasswordL.textChanged.connect(self.onLeftTextChanged)
         self.leftText.textChanged.connect(self.onLeftTextChanged)
+        self.checkPwdL.stateChanged.connect(self.onCryptMode)
         self.buttonCryptMode.clicked.connect(self.onCryptMode)
         #
         self.linePasswordR.textChanged.connect(self.onRightTextChanged)
         self.rightText.textChanged.connect(self.onRightTextChanged)
+        self.checkPwdR.stateChanged.connect(self.onDecryptMode)
         self.buttonDecryptMode.clicked.connect(self.onDecryptMode)
         #
         self.preProcess.currentIndexChanged.connect(self.onLeftTextChanged)
@@ -160,6 +164,14 @@ class Window(QtGui.QMainWindow):
         self.linePasswordR.setDisabled(True)
         self.rightText.setReadOnly(True)
         #
+        self.checkPwdL.setDisabled(False)
+        self.checkPwdR.setDisabled(True)
+        #
+        if self.checkPwdL.isChecked():
+            self.linePasswordL.setEchoMode(QtGui.QLineEdit.Normal)
+        else:
+        	self.linePasswordL.setEchoMode(QtGui.QLineEdit.Password)
+        #
         self.preProcess.setCurrentIndex(self.postDecrypt.currentIndex())
         self.comboCrypt.setCurrentIndex(self.comboDecrypt.currentIndex())
         self.postProcess.setCurrentIndex(self.preDecrypt.currentIndex())
@@ -175,23 +187,40 @@ class Window(QtGui.QMainWindow):
         self.linePasswordR.setDisabled(False)
         self.rightText.setReadOnly(False)
         #
+        self.checkPwdL.setDisabled(True)
+        self.checkPwdR.setDisabled(False)
+        #
+        if self.checkPwdR.isChecked():
+            self.linePasswordR.setEchoMode(QtGui.QLineEdit.Normal)
+        else:
+            self.linePasswordR.setEchoMode(QtGui.QLineEdit.Password)
+        #
         self.postDecrypt.setCurrentIndex(self.preProcess.currentIndex())
         self.comboDecrypt.setCurrentIndex(self.comboCrypt.currentIndex())
         self.preDecrypt.setCurrentIndex(self.postProcess.currentIndex())
         #
 
-    def __error(self, step, pre, enc, post):
+    def __error(self, step, pre, enc, post, field='R'):
         #
         if step==1:
-            pre += ' (ERROR!)'
+            if field=='R':
+                pre += ' (ERROR!)'
+            else:
+                pre += ' (IGNORED!)'
         elif step==2:
             enc += ' (ERROR!)'
         elif step==3:
             post += ' (ERROR!)'
         #
-        self.leftText.clear()
-        self.statusBar.setStyleSheet('color: red;')
-        self.statusBar.showMessage('  Decryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post))
+        if field=='R':
+            self.leftText.clear()
+            self.statusBar.setStyleSheet('color: red;')
+            self.statusBar.showMessage('  Decryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post))
+        else:
+            self.rightText.clear()
+            self.statusBar.setStyleSheet('color: red;')
+            self.statusBar.showMessage('  Ecnryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post))
+           
         #
 
     def onLeftTextChanged(self):
@@ -215,7 +244,8 @@ class Window(QtGui.QMainWindow):
         L = len(pwd)
         pwd += 'X' * ( (((L/16)+1)*16) - L )
         #
-        txt = self.leftText.toPlainText()
+        try: txt = self.leftText.toPlainText().encode('utf-8')
+        except: txt = self.leftText.toPlainText()
         #
         if pre == 'None':
             pass
@@ -224,7 +254,8 @@ class Window(QtGui.QMainWindow):
         if pre == 'BZ2':
             txt = txt.encode('bz2')
         if pre == 'ROT13':
-            txt = txt.encode('rot13')
+            try: txt = txt.encode('rot13')
+            except: self.__error(1, pre, enc, post, 'L')
         #
         L = len(txt)
         txt += 'X' * ( (((L/16)+1)*16) - L )
@@ -326,6 +357,11 @@ class Window(QtGui.QMainWindow):
         if post == 'ROT13':
             try: txt = txt.decode('rot13')
             except: self.__error(3, pre, enc, post) ; return
+        #
+        try:
+            self.leftText.setPlainText(txt.decode('utf-8'))
+            return
+        except: pass
         #
         self.leftText.setPlainText(txt)
         #
