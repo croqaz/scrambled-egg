@@ -170,7 +170,7 @@ class Window(QtGui.QMainWindow):
         if self.checkPwdL.isChecked():
             self.linePasswordL.setEchoMode(QtGui.QLineEdit.Normal)
         else:
-        	self.linePasswordL.setEchoMode(QtGui.QLineEdit.Password)
+            self.linePasswordL.setEchoMode(QtGui.QLineEdit.Password)
         #
         self.preProcess.setCurrentIndex(self.postDecrypt.currentIndex())
         self.comboCrypt.setCurrentIndex(self.comboDecrypt.currentIndex())
@@ -220,7 +220,6 @@ class Window(QtGui.QMainWindow):
             self.rightText.clear()
             self.statusBar.setStyleSheet('color: red;')
             self.statusBar.showMessage('  Ecnryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post))
-           
         #
 
     def onLeftTextChanged(self):
@@ -249,13 +248,15 @@ class Window(QtGui.QMainWindow):
         #
         if pre == 'None':
             pass
-        if pre == 'ZLIB':
+        elif pre == 'ZLIB':
             txt = txt.encode('zlib')
-        if pre == 'BZ2':
+        elif pre == 'BZ2':
             txt = txt.encode('bz2')
-        if pre == 'ROT13':
+        elif pre == 'ROT13':
             try: txt = txt.encode('rot13')
             except: self.__error(1, pre, enc, post, 'L')
+        else:
+            raise Exception('Invalid scramble !')
         #
         L = len(txt)
         txt += 'X' * ( (((L/16)+1)*16) - L )
@@ -274,17 +275,23 @@ class Window(QtGui.QMainWindow):
             encrypted = o.encrypt(txt)
         elif enc == 'None':
             encrypted = txt
+        else:
+            raise Exception('Invalid encryption mode !')
         #
         if post == 'Base64 Codec':
-            self.rightText.setPlainText('<#>%s:%s:%s<#>' % (pre, enc, post.replace(' Codec','')) + encrypted.encode('base64'))
+            final = '<#>%s:%s:%s<#>' % (pre, enc, post.replace(' Codec','')) + encrypted.encode('base64')
         elif post == 'HEX Codec':
-            self.rightText.setPlainText('<#>%s:%s:%s<#>' % (pre, enc, post.replace(' Codec','')) + encrypted.encode('hex'))
+            final = '<#>%s:%s:%s<#>' % (pre, enc, post.replace(' Codec','')) + encrypted.encode('hex')
         elif post == 'Quopri Codec':
-            self.rightText.setPlainText('<#>%s:%s:%s<#>' % (pre, enc, post.replace(' Codec','')) + encrypted.encode('quopri_codec'))
+            final = '<#>%s:%s:%s<#>' % (pre, enc, post.replace(' Codec','')) + encrypted.encode('quopri_codec')
         elif post == 'String Escape':
-            self.rightText.setPlainText('<#>%s:%s:%s<#>' % (pre, enc, post) + encrypted.encode('string_escape'))
+            final = '<#>%s:%s:%s<#>' % (pre, enc, post) + encrypted.encode('string_escape')
         elif post == 'UU Codec':
-            self.rightText.setPlainText('<#>%s:%s:%s<#>' % (pre, enc, post.replace(' Codec','')) + encrypted.encode('uu'))
+            final = '<#>%s:%s:%s<#>' % (pre, enc, post.replace(' Codec','')) + encrypted.encode('uu')
+        else:
+            raise Exception('Invalid codec !')
+        #
+        self.rightText.setPlainText(final)
         #
 
     def onRightTextChanged(self):
@@ -298,13 +305,13 @@ class Window(QtGui.QMainWindow):
         txt = self.rightText.toPlainText()
         #
         try:
-            info = re.search('<#>([0-9a-zA-Z ]*:[0-9a-zA-Z ]*:[0-9a-zA-Z ]*)<#>', txt).group(1)
+            info = re.search('[<[{(]?#[)}\]>]?([0-9a-zA-Z ]*:[0-9a-zA-Z ]*:[0-9a-zA-Z ]*)[<[{(]?#[)}\]>]?', txt).group(1)
             self.postDecrypt.setCurrentIndex( self.postDecrypt.findText(info.split(':')[0], QtCore.Qt.MatchFlag(QtCore.Qt.MatchContains)) )
             self.comboDecrypt.setCurrentIndex( self.comboDecrypt.findText(info.split(':')[1], QtCore.Qt.MatchFlag(QtCore.Qt.MatchContains)) )
             self.preDecrypt.setCurrentIndex( self.preDecrypt.findText(info.split(':')[2], QtCore.Qt.MatchFlag(QtCore.Qt.MatchContains)) )
-            txt = re.sub('<#>[0-9a-zA-Z ]*:[0-9a-zA-Z ]*:[0-9a-zA-Z ]*<#>', '', txt)
+            txt = re.sub('[<[{(]?#[)}\]>]?[0-9a-zA-Z ]*:[0-9a-zA-Z ]*:[0-9a-zA-Z ]*[<[{(]?#[)}\]>]?', '', txt)
         except:
-            info = ''
+            pass
         #
         # This must be right here.
         pre = self.preDecrypt.currentText()
@@ -330,6 +337,8 @@ class Window(QtGui.QMainWindow):
         elif pre == 'UU Codec':
             try: txt = txt.decode('uu')
             except: self.__error(1, pre, enc, post) ; return
+        else:
+            raise Exception('Invalid codec !')
         #
         if enc == 'AES':
             o = AES.new(pwd)
@@ -341,6 +350,8 @@ class Window(QtGui.QMainWindow):
             o = DES3.new(pwd)
         elif enc == 'None':
             txt = txt.rstrip('X')
+        else:
+            raise Exception('Invalid decrypt !')
         #
         if enc != 'None':
             try: txt = o.decrypt(txt).rstrip('X')
@@ -348,15 +359,17 @@ class Window(QtGui.QMainWindow):
         #
         if post == 'None':
             pass
-        if post == 'ZLIB':
+        elif post == 'ZLIB':
             try: txt = txt.decode('zlib')
             except: self.__error(3, pre, enc, post) ; return
-        if post == 'BZ2':
+        elif post == 'BZ2':
             try: txt = txt.decode('bz2')
             except: self.__error(3, pre, enc, post) ; return
-        if post == 'ROT13':
+        elif post == 'ROT13':
             try: txt = txt.decode('rot13')
             except: self.__error(3, pre, enc, post) ; return
+        else:
+            raise Exception('Invalid scramble !')
         #
         try:
             self.leftText.setPlainText(txt.decode('utf-8'))
@@ -376,4 +389,5 @@ if __name__ == '__main__':
     sys.exit(app.exec_())
 
 # Eof()
+
 
