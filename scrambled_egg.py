@@ -27,6 +27,138 @@ ENC = ['AES', 'Blowfish', 'CAST', 'DES3', 'None']
 ENCODE = ['Base64 Codec', 'HEX Codec', 'Quopri Codec', 'String Escape', 'UU Codec']
 #
 
+
+class ScrambledEgg():
+
+    def __init__(self):
+        self.error = ''
+
+    def __error(self, step, pre, enc, post, field='R'):
+        #
+        if step==1:
+            if field=='R':
+                pre += ' (ERROR!)'
+            else:
+                pre += ' (IGNORED!)'
+        elif step==2:
+            enc += ' (ERROR!)'
+        elif step==3:
+            post += ' (ERROR!)'
+        #
+        if field=='R':
+            self.error = '  Decryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post)
+        else:
+            self.error = '  Encryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post)
+        #
+
+    def encrypt(self, txt, pre, enc, post, pwd):
+        #
+        L = len(pwd)
+        pwd += 'X' * ( (((L/16)+1)*16) - L )
+        #
+        if pre == 'None':
+            pass
+        elif pre == 'ZLIB':
+            txt = txt.encode('zlib')
+        elif pre == 'BZ2':
+            txt = txt.encode('bz2')
+        elif pre == 'ROT13':
+            try: txt = txt.encode('rot13')
+            except: self.__error(1, pre, enc, post, 'L')
+        else:
+            raise Exception('Invalid scramble !')
+        #
+        L = len(txt)
+        txt += 'X' * ( (((L/16)+1)*16) - L )
+        #
+        if enc == 'AES':
+            o = AES.new(pwd)
+            encrypted = o.encrypt(txt)
+        elif enc == 'Blowfish':
+            o = Blowfish.new(pwd)
+            encrypted = o.encrypt(txt)
+        elif enc == 'CAST':
+            o = CAST.new(pwd)
+            encrypted = o.encrypt(txt)
+        elif enc == 'DES3':
+            o = DES3.new(pwd)
+            encrypted = o.encrypt(txt)
+        elif enc == 'None':
+            encrypted = txt
+        else:
+            raise Exception('Invalid encryption mode !')
+        #
+        if post == 'Base64 Codec':
+            final = '<#>%s:%s:%s<#>' % (pre, enc, post.replace(' Codec','')) + encrypted.encode('base64')
+        elif post == 'HEX Codec':
+            final = '<#>%s:%s:%s<#>' % (pre, enc, post.replace(' Codec','')) + encrypted.encode('hex')
+        elif post == 'Quopri Codec':
+            final = '<#>%s:%s:%s<#>' % (pre, enc, post.replace(' Codec','')) + encrypted.encode('quopri_codec')
+        elif post == 'String Escape':
+            final = '<#>%s:%s:%s<#>' % (pre, enc, post) + encrypted.encode('string_escape')
+        elif post == 'UU Codec':
+            final = '<#>%s:%s:%s<#>' % (pre, enc, post.replace(' Codec','')) + encrypted.encode('uu')
+        else:
+            raise Exception('Invalid codec !')
+        #
+        return final
+        #
+
+    def decrypt(self, txt, pre, enc, post, pwd):
+        #
+        if pre == 'Base64 Codec':
+            try: txt = txt.decode('base64')
+            except: self.__error(1, pre, enc, post) ; return
+        elif pre == 'HEX Codec':
+            try: txt = txt.decode('hex')
+            except: self.__error(1, pre, enc, post) ; return
+        elif pre == 'Quopri Codec':
+            try: txt = txt.decode('quopri_codec')
+            except: self.__error(1, pre, enc, post) ; return
+        elif pre == 'String Escape':
+            try: txt = txt.decode('string_escape')
+            except: self.__error(1, pre, enc, post) ; return
+        elif pre == 'UU Codec':
+            try: txt = txt.decode('uu')
+            except: self.__error(1, pre, enc, post) ; return
+        else:
+            raise Exception('Invalid codec !')
+        #
+        if enc == 'AES':
+            o = AES.new(pwd)
+        elif enc == 'Blowfish':
+            o = Blowfish.new(pwd)
+        elif enc == 'CAST':
+            o = CAST.new(pwd)
+        elif enc == 'DES3':
+            o = DES3.new(pwd)
+        elif enc == 'None':
+            txt = txt.rstrip('X')
+        else:
+            raise Exception('Invalid decrypt !')
+        #
+        if enc != 'None':
+            try: txt = o.decrypt(txt).rstrip('X')
+            except: self.__error(2, pre, enc, post) ; return
+        #
+        if post == 'None':
+            final = txt
+        elif post == 'ZLIB':
+            try: final = txt.decode('zlib')
+            except: self.__error(3, pre, enc, post) ; return
+        elif post == 'BZ2':
+            try: final = txt.decode('bz2')
+            except: self.__error(3, pre, enc, post) ; return
+        elif post == 'ROT13':
+            try: final = txt.decode('rot13')
+            except: self.__error(3, pre, enc, post) ; return
+        else:
+            raise Exception('Invalid scramble !')
+        #
+        return final
+        #
+
+
 class Window(QtGui.QMainWindow):
 
     def __init__(self):
@@ -38,6 +170,7 @@ class Window(QtGui.QMainWindow):
         self.setWindowTitle('Live Crypt')
         QtGui.QApplication.setStyle(QtGui.QStyleFactory.create('CleanLooks'))
         QtGui.QApplication.setPalette(QtGui.QApplication.style().standardPalette())
+        self.SE = ScrambledEgg()
 
         self.centralWidget = QtGui.QWidget(self) # Central Widget.
         self.setCentralWidget(self.centralWidget)
@@ -200,36 +333,18 @@ class Window(QtGui.QMainWindow):
         self.preDecrypt.setCurrentIndex(self.postProcess.currentIndex())
         #
 
-    def __error(self, step, pre, enc, post, field='R'):
-        #
-        if step==1:
-            if field=='R':
-                pre += ' (ERROR!)'
-            else:
-                pre += ' (IGNORED!)'
-        elif step==2:
-            enc += ' (ERROR!)'
-        elif step==3:
-            post += ' (ERROR!)'
-        #
-        if field=='R':
-            self.leftText.clear()
-            self.statusBar.setStyleSheet('color: red;')
-            self.statusBar.showMessage('  Decryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post))
-        else:
-            self.rightText.clear()
-            self.statusBar.setStyleSheet('color: red;')
-            self.statusBar.showMessage('  Ecnryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post))
-        #
-
     def onLeftTextChanged(self):
         #
         if not self.buttonCryptMode.isChecked() or not self.leftText.toPlainText():
             return
         #
+        # This must be right here.
         pre = self.preProcess.currentText()
         enc = self.comboCrypt.currentText()
         post = self.postProcess.currentText()
+        pwd = self.linePasswordL.text()
+        try: txt = self.leftText.toPlainText().encode('utf-8')
+        except: txt = self.leftText.toPlainText()
         #
         if self.buttonCryptMode.isChecked():
             self.statusBar.setStyleSheet('color: blue;')
@@ -239,59 +354,14 @@ class Window(QtGui.QMainWindow):
         self.comboDecrypt.setCurrentIndex(self.comboCrypt.currentIndex())
         self.preDecrypt.setCurrentIndex(self.postProcess.currentIndex())
         #
-        pwd = self.linePasswordL.text().strip('X')
-        L = len(pwd)
-        pwd += 'X' * ( (((L/16)+1)*16) - L )
+        final = self.SE.encrypt(txt, pre, enc, post, pwd)
         #
-        try: txt = self.leftText.toPlainText().encode('utf-8')
-        except: txt = self.leftText.toPlainText()
-        #
-        if pre == 'None':
-            pass
-        elif pre == 'ZLIB':
-            txt = txt.encode('zlib')
-        elif pre == 'BZ2':
-            txt = txt.encode('bz2')
-        elif pre == 'ROT13':
-            try: txt = txt.encode('rot13')
-            except: self.__error(1, pre, enc, post, 'L')
+        if final:
+            self.rightText.setPlainText(final)
         else:
-            raise Exception('Invalid scramble !')
-        #
-        L = len(txt)
-        txt += 'X' * ( (((L/16)+1)*16) - L )
-        #
-        if enc == 'AES':
-            o = AES.new(pwd)
-            encrypted = o.encrypt(txt)
-        elif enc == 'Blowfish':
-            o = Blowfish.new(pwd)
-            encrypted = o.encrypt(txt)
-        elif enc == 'CAST':
-            o = CAST.new(pwd)
-            encrypted = o.encrypt(txt)
-        elif enc == 'DES3':
-            o = DES3.new(pwd)
-            encrypted = o.encrypt(txt)
-        elif enc == 'None':
-            encrypted = txt
-        else:
-            raise Exception('Invalid encryption mode !')
-        #
-        if post == 'Base64 Codec':
-            final = '<#>%s:%s:%s<#>' % (pre, enc, post.replace(' Codec','')) + encrypted.encode('base64')
-        elif post == 'HEX Codec':
-            final = '<#>%s:%s:%s<#>' % (pre, enc, post.replace(' Codec','')) + encrypted.encode('hex')
-        elif post == 'Quopri Codec':
-            final = '<#>%s:%s:%s<#>' % (pre, enc, post.replace(' Codec','')) + encrypted.encode('quopri_codec')
-        elif post == 'String Escape':
-            final = '<#>%s:%s:%s<#>' % (pre, enc, post) + encrypted.encode('string_escape')
-        elif post == 'UU Codec':
-            final = '<#>%s:%s:%s<#>' % (pre, enc, post.replace(' Codec','')) + encrypted.encode('uu')
-        else:
-            raise Exception('Invalid codec !')
-        #
-        self.rightText.setPlainText(final)
+            self.rightText.clear()
+            self.statusBar.setStyleSheet('color: red;')
+            self.statusBar.showMessage(self.SE.error)
         #
 
     def onRightTextChanged(self):
@@ -299,7 +369,7 @@ class Window(QtGui.QMainWindow):
         if not self.buttonDecryptMode.isChecked() or not self.rightText.toPlainText():
             return
         #
-        pwd = self.linePasswordR.text().strip('X')
+        pwd = self.linePasswordR.text()
         L = len(pwd)
         pwd += 'X' * ( (((L/16)+1)*16) - L )
         txt = self.rightText.toPlainText()
@@ -322,62 +392,20 @@ class Window(QtGui.QMainWindow):
             self.statusBar.setStyleSheet('color: blue;')
             self.statusBar.showMessage('  Decryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post))
         #
-        if pre == 'Base64 Codec':
-            try: txt = txt.decode('base64')
-            except: self.__error(1, pre, enc, post) ; return
-        elif pre == 'HEX Codec':
-            try: txt = txt.decode('hex')
-            except: self.__error(1, pre, enc, post) ; return
-        elif pre == 'Quopri Codec':
-            try: txt = txt.decode('quopri_codec')
-            except: self.__error(1, pre, enc, post) ; return
-        elif pre == 'String Escape':
-            try: txt = txt.decode('string_escape')
-            except: self.__error(1, pre, enc, post) ; return
-        elif pre == 'UU Codec':
-            try: txt = txt.decode('uu')
-            except: self.__error(1, pre, enc, post) ; return
+        final = self.SE.decrypt(txt, pre, enc, post, pwd)
+        #
+        if final:
+            try:
+                self.leftText.setPlainText(final.decode('utf-8'))
+                return
+            except:
+                self.leftText.setPlainText(final)
         else:
-            raise Exception('Invalid codec !')
+            self.leftText.clear()
+            self.statusBar.setStyleSheet('color: red;')
+            self.statusBar.showMessage(self.SE.error)
         #
-        if enc == 'AES':
-            o = AES.new(pwd)
-        elif enc == 'Blowfish':
-            o = Blowfish.new(pwd)
-        elif enc == 'CAST':
-            o = CAST.new(pwd)
-        elif enc == 'DES3':
-            o = DES3.new(pwd)
-        elif enc == 'None':
-            txt = txt.rstrip('X')
-        else:
-            raise Exception('Invalid decrypt !')
-        #
-        if enc != 'None':
-            try: txt = o.decrypt(txt).rstrip('X')
-            except: self.__error(2, pre, enc, post) ; return
-        #
-        if post == 'None':
-            pass
-        elif post == 'ZLIB':
-            try: txt = txt.decode('zlib')
-            except: self.__error(3, pre, enc, post) ; return
-        elif post == 'BZ2':
-            try: txt = txt.decode('bz2')
-            except: self.__error(3, pre, enc, post) ; return
-        elif post == 'ROT13':
-            try: txt = txt.decode('rot13')
-            except: self.__error(3, pre, enc, post) ; return
-        else:
-            raise Exception('Invalid scramble !')
-        #
-        try:
-            self.leftText.setPlainText(txt.decode('utf-8'))
-            return
-        except: pass
-        #
-        self.leftText.setPlainText(txt)
-        #
+
 
 #
 
