@@ -7,12 +7,14 @@
 # ---
 
 import os, sys
-import re
+import re, math
 
 from Crypto.Cipher import AES
 from Crypto.Cipher import Blowfish
 from Crypto.Cipher import CAST
 from Crypto.Cipher import DES3
+
+from PIL import Image
 
 import sip
 sip.setapi('QString', 2)
@@ -158,6 +160,75 @@ class ScrambledEgg():
         return final
         #
 
+    def toImage(self, txt, pre, enc, post, pwd, path):
+        #
+        val = self.encrypt(txt, pre, enc, post, pwd)
+        if not val:
+            return
+        #
+        edge = math.ceil( math.sqrt( len(val)/4 ) )
+        list_val = list(val)
+        im = Image.new('RGBA', (edge, edge))
+        pix = im.load()
+        #
+        for i in range(edge):
+            for j in range(edge):
+                #
+                if len(list_val) >= 1:
+                    _r = ord(list_val.pop(0))
+                else:
+                    _r = 255
+                if len(list_val) >= 1:
+                    _g = ord(list_val.pop(0))
+                else:
+                    _g = 255
+                if len(list_val) >= 1:
+                    _b = ord(list_val.pop(0))
+                else:
+                    _b = 255
+                if len(list_val) >= 1:
+                    _a = ord(list_val.pop(0))
+                else:
+                    _a = 255
+                pix[i, j] = (_r, _g, _b, _a)
+                #
+        #
+        try:
+            im.save(path)
+        except:
+            print('Cannot save PNG file "%s" !' % path)
+        #
+
+    def fromImage(self, txt, pre, enc, post, pwd, path):
+        #
+        if not os.path.exists(path):
+            print('Cannot find path "%s" !' % path)
+            return
+        #
+        try:
+            im = Image.open(path)
+        except:
+            print('Image "%s" is not a valid RGBA PNG !' % path)
+            return
+        #
+        pix = im.load()
+        list_val = []
+        #
+        for i in range(im.size[1]):
+            for j in range(im.size[0]):
+                rgba = pix[i, j]
+                for v in rgba:
+                    if v != 255:
+                        list_val.append(unichr(v))
+        #
+        final = re.sub('[<[{(]?#[)}\]>]?[0-9a-zA-Z ]*:[0-9a-zA-Z ]*:[0-9a-zA-Z ]*[<[{(]?#[)}\]>]?', '', ''.join(list_val))
+        val = self.decrypt(final, pre, enc, post, pwd)
+        #
+        if not val:
+            print(self.error)
+        else:
+            return val
+        #
 
 class Window(QtGui.QMainWindow):
 
