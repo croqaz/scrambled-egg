@@ -250,7 +250,7 @@ class Window(QtGui.QMainWindow):
         self.layout = QtGui.QGridLayout(self.centralWidget) # Main Layout.
         self.centralWidget.setLayout(self.layout)
 
-        self.leftText = QtGui.QPlainTextEdit(self.centralWidget)  # To write clean text.
+        self.leftText = QtGui.QTextEdit(self.centralWidget)       # To write clean text.
         self.rightText = QtGui.QPlainTextEdit(self.centralWidget) # To view encrypted text.
 
         self.buttonCryptMode = QtGui.QPushButton('Encrypt Mode', self.centralWidget)
@@ -409,14 +409,21 @@ class Window(QtGui.QMainWindow):
         if not self.buttonCryptMode.isChecked() or not self.leftText.toPlainText():
             return
         #
-        # This must be right here.
+        # Save all pre/enc/post operations.
         pre = self.preProcess.currentText()
         enc = self.comboCrypt.currentText()
         post = self.postProcess.currentText()
         pwd = self.linePasswordL.text()
-        try: txt = self.leftText.toPlainText().encode('utf-8')
-        except: txt = self.leftText.toPlainText()
+        try: txt = self.leftText.toHtml().encode('utf-8')
+        except: txt = self.leftText.toHtml()
         #
+        # Cleanup HTML string.
+        txt = re.sub('^.*<body.+?>', '', ' '.join(txt.split()))
+        txt = txt.replace('</body>', '')
+        txt = txt.replace('</html>', '')
+        txt = txt.strip()
+        #
+        # Setup default (no error) status.
         if self.buttonCryptMode.isChecked():
             self.statusBar.setStyleSheet('color: blue;')
             self.statusBar.showMessage('  Encryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post))
@@ -425,6 +432,7 @@ class Window(QtGui.QMainWindow):
         self.comboDecrypt.setCurrentIndex(self.comboCrypt.currentIndex())
         self.preDecrypt.setCurrentIndex(self.postProcess.currentIndex())
         #
+        # Encrypt the text.
         final = self.SE.encrypt(txt, pre, enc, post, pwd)
         #
         if final:
@@ -463,20 +471,26 @@ class Window(QtGui.QMainWindow):
             self.statusBar.setStyleSheet('color: blue;')
             self.statusBar.showMessage('  Decryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post))
         #
+        self.preProcess.setCurrentIndex(self.postDecrypt.currentIndex())
+        self.comboCrypt.setCurrentIndex(self.comboDecrypt.currentIndex())
+        self.postProcess.setCurrentIndex(self.preDecrypt.currentIndex())
+        #
+        # Decrypt the text.
         final = self.SE.decrypt(txt, pre, enc, post, pwd)
         #
         if final:
-            try:
-                self.leftText.setPlainText(final.decode('utf-8'))
-                return
-            except:
-                self.leftText.setPlainText(final)
+            #
+            # Cleanup HTML string.
+            txt = re.sub('^.*<body.+?>', '', ' '.join(final.split()))
+            txt = txt.replace('</body>', '')
+            txt = txt.replace('</html>', '')
+            self.leftText.setHtml(txt.strip())
+            #
         else:
             self.leftText.clear()
             self.statusBar.setStyleSheet('color: red;')
             self.statusBar.showMessage(self.SE.error)
         #
-
 
 #
 
