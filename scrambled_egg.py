@@ -23,10 +23,11 @@ sip.setapi('QVariant', 2)
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 
+
 #
-SCRAMBLE = ['None', 'ZLIB', 'BZ2', 'ROT13']
-ENC = ['AES', 'Blowfish', 'CAST', 'DES3', 'None']
-ENCODE = ['Base64 Codec', 'HEX Codec', 'Quopri Codec', 'String Escape', 'UU Codec']
+SCRAMBLE = {'None':'N', 'ZLIB':'ZL', 'BZ2':'BZ', 'ROT13':'R'}
+ENC = {'AES':'A', 'Blowfish':'B', 'CAST':'C', 'DES3':'D', 'None':'N'}
+ENCODE = {'Base64 Codec':'B', 'HEX Codec':'H', 'Quopri Codec':'Q', 'String Escape':'STR', 'UU Codec':'UU'}
 #
 
 
@@ -91,15 +92,15 @@ class ScrambledEgg():
             raise Exception('Invalid encryption mode !')
         #
         if post == 'Base64 Codec':
-            final = '<#>%s:%s:%s<#>' % (pre, enc, post.replace(' Codec','')) + encrypted.encode('base64')
+            final = '<#>%s:%s:%s<#>' % (SCRAMBLE[pre], ENC[enc], ENCODE[post].replace(' Codec','')) + encrypted.encode('base64')
         elif post == 'HEX Codec':
-            final = '<#>%s:%s:%s<#>' % (pre, enc, post.replace(' Codec','')) + encrypted.encode('hex')
+            final = '<#>%s:%s:%s<#>' % (SCRAMBLE[pre], ENC[enc], ENCODE[post].replace(' Codec','')) + encrypted.encode('hex')
         elif post == 'Quopri Codec':
-            final = '<#>%s:%s:%s<#>' % (pre, enc, post.replace(' Codec','')) + encrypted.encode('quopri_codec')
+            final = '<#>%s:%s:%s<#>' % (SCRAMBLE[pre], ENC[enc], ENCODE[post].replace(' Codec','')) + encrypted.encode('quopri_codec')
         elif post == 'String Escape':
-            final = '<#>%s:%s:%s<#>' % (pre, enc, post) + encrypted.encode('string_escape')
+            final = '<#>%s:%s:%s<#>' % (SCRAMBLE[pre], ENC[enc], ENCODE[post]) + encrypted.encode('string_escape')
         elif post == 'UU Codec':
-            final = '<#>%s:%s:%s<#>' % (pre, enc, post.replace(' Codec','')) + encrypted.encode('uu')
+            final = '<#>%s:%s:%s<#>' % (SCRAMBLE[pre], ENC[enc], ENCODE[post].replace(' Codec','')) + encrypted.encode('uu')
         else:
             raise Exception('Invalid codec !')
         #
@@ -162,20 +163,32 @@ class ScrambledEgg():
 
     def toImage(self, txt, pre, enc, post, pwd, path, encrypt=True):
         #
-        if encrypt:
+        if encrypt: # If text MUST be encrypted first.
             val = self.encrypt(txt, pre, enc, post, pwd)
             if not val:
                 return
-        else:
+        else: # Else, the text is already encrypted.
             val = txt
         #
-        edge = int( math.ceil( math.sqrt( len(val)/4 ) ) )
+        # Calculate the edge of the square.
+        edge = int(math.ceil(math.sqrt(len(val)/4)))
+        # Calculate blank pixels.
+        blank = (edge * edge - len(val)/4) / 2
+        # Explode the encrypted string.
         list_val = list(val)
+        # New square image.
+        print('Creating new image, %ix%i, blank=%i, string to encode is %i characters.' % (edge, edge, blank, len(val)))
         im = Image.new('RGBA', (edge, edge))
+        # Load pixels...
         pix = im.load()
         #
         for i in range(edge):
             for j in range(edge):
+                #
+                if blank:
+                    blank -= 1
+                    pix[j, i] = (255, 255, 255, 255)
+                    continue
                 #
                 if len(list_val) >= 1:
                     _r = ord(list_val.pop(0))
@@ -193,7 +206,7 @@ class ScrambledEgg():
                     _a = ord(list_val.pop(0))
                 else:
                     _a = 255
-                pix[i, j] = (_r, _g, _b, _a)
+                pix[j, i] = (_r, _g, _b, _a)
                 #
         #
         try:
@@ -214,18 +227,18 @@ class ScrambledEgg():
             print('Image "%s" is not a valid RGBA PNG !' % path)
             return
         #
+        # Load pixels...
         pix = im.load()
         list_val = []
         #
         for i in range(im.size[1]):
             for j in range(im.size[0]):
-                rgba = pix[i, j]
+                rgba = pix[j, i]
                 for v in rgba:
-                    if v != 255:
+                    if v and v != 255:
                         list_val.append(unichr(v))
         #
-        if decrypt:
-            #
+        if decrypt: # If the text MUST be decrypted.
             final = re.sub('[<[{(]?#[)}\]>]?[0-9a-zA-Z ]*:[0-9a-zA-Z ]*:[0-9a-zA-Z ]*[<[{(]?#[)}\]>]?', '', ''.join(list_val))
             val = self.decrypt(final, pre, enc, post, pwd)
             #
@@ -233,8 +246,7 @@ class ScrambledEgg():
                 print(self.error)
             else:
                 return val
-            #
-        else:
+        else: # Else, don't decrypt.
             val = ''.join(list_val)
             return val
         #
@@ -270,7 +282,8 @@ class Window(QtGui.QMainWindow):
         self.postProcess = QtGui.QComboBox(self.centralWidget) # Left side.
         self.linePasswordL = QtGui.QLineEdit(self.centralWidget) # Left side.
         self.checkPwdL = QtGui.QCheckBox('<- Pwd', self.centralWidget) # Left side.
-        self.saveImage = QtGui.QPushButton('Save', self.centralWidget) # Left side.
+        self.saveImage = QtGui.QPushButton('Export PNG', self.centralWidget) # Left side.
+        self.setFormatting = QtGui.QCheckBox('Formatted text', self.centralWidget) # Left side.
         self.nrLettersL = QtGui.QLabel('', self.centralWidget) # Left side.
 
         self.preDecrypt = QtGui.QComboBox(self.centralWidget)    # Right side.
@@ -278,7 +291,7 @@ class Window(QtGui.QMainWindow):
         self.postDecrypt = QtGui.QComboBox(self.centralWidget)   # Right side.
         self.linePasswordR = QtGui.QLineEdit(self.centralWidget) # Right side.
         self.checkPwdR = QtGui.QCheckBox('<- Pwd', self.centralWidget) # Right side.
-        self.loadImage = QtGui.QPushButton('Load', self.centralWidget) # Right side.
+        self.loadImage = QtGui.QPushButton('Import PNG', self.centralWidget) # Right side.
         self.nrLettersR = QtGui.QLabel('', self.centralWidget) # Right side.
 
         self.layout.addWidget(self.buttonCryptMode, 1, 1, 1, 5)
@@ -290,7 +303,8 @@ class Window(QtGui.QMainWindow):
         self.layout.addWidget(self.preDecrypt, 2, 6, 1, 1)
         self.layout.addWidget(self.comboDecrypt, 2, 7, 1, 1)
         self.layout.addWidget(self.postDecrypt, 2, 8, 1, 1)
-        
+        self.layout.addWidget(self.setFormatting, 21, 3, 1, 1)
+
         self.layout.addWidget(self.saveImage, 21, 1, 1, 1)
         self.layout.addWidget(self.nrLettersL, 21, 5, 1, 1)
         self.layout.addWidget(self.loadImage, 21, 6, 1, 1)
@@ -330,6 +344,9 @@ class Window(QtGui.QMainWindow):
         self.linePasswordR.setDisabled(True)
         self.checkPwdR.setTristate(False)
         #
+        # Formatted text.
+        self.setFormatting.setTristate(False)
+        #
         MIN = 110
         self.preProcess.setMinimumWidth(MIN)
         self.comboCrypt.setMinimumWidth(MIN)
@@ -341,21 +358,21 @@ class Window(QtGui.QMainWindow):
         # Pre combo-boxes.
         self.preProcess.setToolTip('Select pre-process')
         self.postDecrypt.setToolTip('Select post-decrypt')
-        for scramble in SCRAMBLE:
+        for scramble in sorted(SCRAMBLE.keys()):
             self.preProcess.addItem(scramble, scramble)
             self.postDecrypt.addItem(scramble, scramble)
         #
         # Encryption/ decryption combo-boxes.
         self.comboCrypt.setToolTip('Select encryption algorithm; it will use the provided password')
         self.comboDecrypt.setToolTip('Select encryption algorithm; it will use the provided password')
-        for enc in ENC:
+        for enc in sorted(ENC.keys()):
             self.comboCrypt.addItem(enc, enc)
             self.comboDecrypt.addItem(enc, enc)
         #
         # Post combo-boxes.
         self.postProcess.setToolTip('Select post-process')
         self.preDecrypt.setToolTip('Select pre-decrypt')
-        for encode in ENCODE:
+        for encode in sorted(ENCODE.keys()):
             self.postProcess.addItem(encode, encode)
             self.preDecrypt.addItem(encode, encode)
         #
@@ -385,6 +402,7 @@ class Window(QtGui.QMainWindow):
         #
         self.saveImage.clicked.connect(self.onSave)
         self.loadImage.clicked.connect(self.onLoad)
+        self.setFormatting.toggled.connect(self.onLeftTextChanged)
         #
         # ACTION !
         self.onCryptMode()
@@ -438,7 +456,10 @@ class Window(QtGui.QMainWindow):
 
     def onLeftTextChanged(self):
         #
-        if not self.buttonCryptMode.isChecked() or not self.leftText.toPlainText():
+        if not self.buttonCryptMode.isChecked():
+            return
+        if not self.leftText.toPlainText():
+            self.rightText.clear()
             return
         #
         # Save all pre/enc/post operations.
@@ -446,14 +467,19 @@ class Window(QtGui.QMainWindow):
         enc = self.comboCrypt.currentText()
         post = self.postProcess.currentText()
         pwd = self.linePasswordL.text()
-        try: txt = self.leftText.toHtml().encode('utf-8')
-        except: txt = self.leftText.toHtml()
         #
-        # Cleanup HTML string.
-        txt = re.sub('^.*<body.+?>', '', ' '.join(txt.split()))
-        txt = txt.replace('</body>', '')
-        txt = txt.replace('</html>', '')
-        txt = txt.strip()
+        if self.setFormatting.isChecked():
+            # HTML string.
+            try: txt = self.leftText.toHtml().encode('utf_8_sig')
+            except: txt = self.leftText.toHtml()
+            # Cleanup HTML string.
+            txt = re.sub('^.*<body.+?>', '', ' '.join(txt.split()))
+            txt = txt.replace('</body>', '')
+            txt = txt.replace('</html>', '')
+            txt = txt.strip()
+        else:
+            try: txt = self.leftText.toPlainText().encode('utf_8_sig')
+            except: txt = self.leftText.toPlainText()
         #
         # Setup default (no error) status.
         if self.buttonCryptMode.isChecked():
@@ -469,7 +495,10 @@ class Window(QtGui.QMainWindow):
         #
         if final:
             self.rightText.setPlainText(final)
-            self.nrLettersL.setText('Html: %i' % len(txt))
+            if self.setFormatting.isChecked():
+                self.nrLettersL.setText('Html: %i' % len(txt))
+            else:
+                self.nrLettersL.setText('Text: %i' % len(txt))
             self.nrLettersR.setText('Enc: %i' % len(final))
         else:
             self.rightText.clear()
@@ -513,16 +542,15 @@ class Window(QtGui.QMainWindow):
         final = self.SE.decrypt(txt, pre, enc, post, pwd)
         #
         if final:
-            #
             # Cleanup HTML string.
             final = re.sub('^.*<body.+?>', '', ' '.join(final.split()))
             final = final.replace('</body>', '')
             final = final.replace('</html>', '')
             final = final.strip()
-            self.leftText.setHtml(final)
-            self.nrLettersL.setText('Html: %i' % len(txt))
-            self.nrLettersR.setText('Enc: %i' % len(final))
-            #
+            # Setup string as HTML.
+            self.leftText.setHtml(final.decode('utf_8_sig'))
+            self.nrLettersL.setText('Dec: %i' % len(final))
+            self.nrLettersR.setText('Enc: %i' % len(txt))
         else:
             self.leftText.clear()
             self.statusBar.setStyleSheet('color: red;')
@@ -532,7 +560,7 @@ class Window(QtGui.QMainWindow):
     def onSave(self):
         #
         f = QtGui.QFileDialog()
-        path = f.getSaveFileName(self, 'Save crypted text', os.getcwd(), 'All files (*.*)')
+        path = f.getSaveFileName(self, 'Save crypted text', os.getcwd(), 'PNG Images (*.png)')
         if not path:
             return
         #
@@ -541,7 +569,8 @@ class Window(QtGui.QMainWindow):
         enc = self.comboCrypt.currentText()
         post = self.postProcess.currentText()
         pwd = self.linePasswordL.text()
-        txt = self.rightText.toPlainText() # Text from rigth side.
+        # Text from rigth side.
+        txt = self.rightText.toPlainText()
         #
         self.SE.toImage(txt, pre, enc, post, pwd, path, encrypt=False)
         #
@@ -549,13 +578,14 @@ class Window(QtGui.QMainWindow):
     def onLoad(self):
         #
         f = QtGui.QFileDialog()
-        path = f.getOpenFileName(self, 'Load crypted text', os.getcwd(), 'All files (*.*)')
+        path = f.getOpenFileName(self, 'Load crypted text', os.getcwd(), 'PNG Images (*.png)')
         if not path:
             return
         #
         val = self.SE.fromImage(pre=None, enc=None, post=None, pwd=None, path=path, decrypt=False)
         if val:
             self.rightText.setPlainText(val)
+        #
         self.onDecryptMode()
         self.onRightTextChanged()
         #
@@ -570,5 +600,6 @@ if __name__ == '__main__':
     sys.exit(app.exec_())
 
 # Eof()
+
 
 
