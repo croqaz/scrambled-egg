@@ -470,15 +470,22 @@ class Window(QtGui.QMainWindow):
         #
         if self.setFormatting.isChecked():
             # HTML string.
-            try: txt = self.leftText.toHtml().encode('utf_8_sig')
+            try: txt = self.leftText.toHtml().encode('utf_8')
             except: txt = self.leftText.toHtml()
             # Cleanup HTML string.
             txt = re.sub('^.*<body.+?>', '', ' '.join(txt.split()))
             txt = txt.replace('</body>', '')
             txt = txt.replace('</html>', '')
+            txt = txt.replace(' margin-top:0px;', '')
+            txt = txt.replace(' margin-bottom:0px;', '')
+            txt = txt.replace(' margin-left:0px;', '')
+            txt = txt.replace(' margin-right:0px;', '')
+            txt = txt.replace(' -qt-block-indent:0;', '')
+            txt = txt.replace(' text-indent:0px;', '')
+            txt = txt.replace(' style=""', '')
             txt = txt.strip()
         else:
-            try: txt = self.leftText.toPlainText().encode('utf_8_sig')
+            try: txt = self.leftText.toPlainText().encode('utf_8')
             except: txt = self.leftText.toPlainText()
         #
         # Setup default (no error) status.
@@ -546,9 +553,17 @@ class Window(QtGui.QMainWindow):
             final = re.sub('^.*<body.+?>', '', ' '.join(final.split()))
             final = final.replace('</body>', '')
             final = final.replace('</html>', '')
+            final = final.replace(' margin-top:0px;', '')
+            final = final.replace(' margin-bottom:0px;', '')
+            final = final.replace(' margin-left:0px;', '')
+            final = final.replace(' margin-right:0px;', '')
+            final = final.replace(' -qt-block-indent:0;', '')
+            final = final.replace(' text-indent:0px;', '')
+            final = final.replace(' style=""', '')
             final = final.strip()
             # Setup string as HTML.
-            self.leftText.setHtml(final.decode('utf_8_sig'))
+            try: self.leftText.setHtml(final.decode('utf_8'))
+            except: self.leftText.setHtml(final)
             self.nrLettersL.setText('Dec: %i' % len(final))
             self.nrLettersR.setText('Enc: %i' % len(txt))
         else:
