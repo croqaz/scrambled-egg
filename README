@@ -1,0 +1,55 @@
+
+ * Scrambled-Egg Documentation *
+
+-------------
+  Contents:
+-------------
+
+ - About
+ - Licence
+ - Requirements
+ - How to use
+
+###############
+
+----------
+  About:
+----------
+
+ - easily encrypt your data using AES, Blowfish, CAST, or DES3,
+    then encode the result in a printable form, using Base64, HEX, Quopri, string escape, or UU.;
+ - the resulted string can be sent on e-mail, or it can be transformed into a little image.
+ - website : http://scrambled-egg.googlecode.com
+
+------------
+  Licence:
+------------
+  Scrambled-Egg is copyright © 2010, Cristi Constantin. All rights reserved.
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  If you redistribute this software, neither the name of "Scrambled-Egg"
+  nor the names of its contributors may be used to endorse or promote
+  products derived from this software without specific prior written
+  permission.
+
+  This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  See the GNU General Public License (GPL) for more details.
+
+-----------------
+  Requirements:
+-----------------
+ * Python 2.6. Scrambled-Egg is written entirely in Python 2.6. (www.python.org)
+ * Python Crypto. Data is crypted AES, Blowfish, CAST, or DES3. (www.pycrypto.org)
+ * PyQt4. Graphical user interface with Qt. (www.riverbankcomputing.co.uk/software/pyqt)
+
+---------------
+  How to use:
+---------------
+ * In order to access Scrambled-Egg class, all you have to do is : "import scrambled_egg".
+ * Graphical user interface can be accesed by opening "scrambled_egg.py" directly.
+ * Tested on Windows and Ubuntu.

@@ -163,6 +163,10 @@ class ScrambledEgg():
 
     def toImage(self, txt, pre, enc, post, pwd, path, encrypt=True):
         #
+        if str(type(txt)) == "<type 'file'>":
+            txt.seek(0)
+            txt = txt.read()
+        #
         if encrypt: # If text MUST be encrypted first.
             val = self.encrypt(txt, pre, enc, post, pwd)
             if not val:
@@ -175,7 +179,7 @@ class ScrambledEgg():
         # Calculate blank pixels.
         blank = (edge * edge - len(val)/4) / 2
         # Explode the encrypted string.
-        list_val = list(val)
+        list_val = list(val)[::-1]
         # New square image.
         print('Creating new image, %ix%i, blank=%i, string to encode is %i characters.' % (edge, edge, blank, len(val)))
         im = Image.new('RGBA', (edge, edge))
@@ -190,27 +194,22 @@ class ScrambledEgg():
                     pix[j, i] = (255, 255, 255, 255)
                     continue
                 #
+                _r = _g = _b = _a = 255
+                #
                 if len(list_val) >= 1:
-                    _r = ord(list_val.pop(0))
-                else:
-                    _r = 255
+                    _r = ord(list_val.pop())
                 if len(list_val) >= 1:
-                    _g = ord(list_val.pop(0))
-                else:
-                    _g = 255
+                    _g = ord(list_val.pop())
                 if len(list_val) >= 1:
-                    _b = ord(list_val.pop(0))
-                else:
-                    _b = 255
+                    _b = ord(list_val.pop())
                 if len(list_val) >= 1:
-                    _a = ord(list_val.pop(0))
-                else:
-                    _a = 255
+                    _a = ord(list_val.pop())
+                #
                 pix[j, i] = (_r, _g, _b, _a)
                 #
         #
         try:
-            im.save(path)
+            im.save(path, format='PNG', optimize=True)
         except:
             print('Cannot save PNG file "%s" !' % path)
         #
