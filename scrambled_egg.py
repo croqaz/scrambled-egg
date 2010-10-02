@@ -14,8 +14,6 @@ from Crypto.Cipher import Blowfish
 from Crypto.Cipher import CAST
 from Crypto.Cipher import DES3
 
-from PIL import Image
-
 import sip
 sip.setapi('QString', 2)
 sip.setapi('QVariant', 2)
@@ -168,30 +166,30 @@ class ScrambledEgg():
             txt = txt.read()
         #
         if encrypt: # If text MUST be encrypted first.
-            val = self.encrypt(txt, pre, enc, post, pwd)
+            val = self.encrypt(txt, pre, enc, post, pwd)[::-1]
             if not val:
                 return
         else: # Else, the text is already encrypted.
-            val = txt
+            val = txt[::-1]
         #
         # Calculate the edge of the square.
         edge = int(math.ceil(math.sqrt(len(val)/4)))
         # Calculate blank pixels.
         blank = (edge * edge - len(val)/4) / 2
         # Explode the encrypted string.
-        list_val = list(val)[::-1]
+        list_val = list(val)
         # New square image.
         print('Creating new image, %ix%i, blank=%i, string to encode is %i characters.' % (edge, edge, blank, len(val)))
-        im = Image.new('RGBA', (edge, edge))
-        # Load pixels...
-        pix = im.load()
+        im = QtGui.QImage(edge, edge, QtGui.QImage.Format_ARGB32)
+        _pix = im.setPixel
+        _rgba = QtGui.qRgba
         #
         for i in range(edge):
             for j in range(edge):
                 #
                 if blank:
                     blank -= 1
-                    pix[j, i] = (255, 255, 255, 255)
+                    _pix(j, i, _rgba(255, 255, 255, 255))
                     continue
                 #
                 _r = _g = _b = _a = 255
@@ -205,11 +203,11 @@ class ScrambledEgg():
                 if len(list_val) >= 1:
                     _a = ord(list_val.pop())
                 #
-                pix[j, i] = (_r, _g, _b, _a)
+                _pix(j, i, _rgba(_r, _g, _b, _a))
                 #
         #
         try:
-            im.save(path, format='PNG', optimize=True)
+            im.save(path, 'PNG', -1)
         except:
             print('Cannot save PNG file "%s" !' % path)
         #
@@ -221,21 +219,31 @@ class ScrambledEgg():
             return
         #
         try:
-            im = Image.open(path, 'r')
+            im = QtGui.QImage()
+            im.load(path, 'PNG')
         except:
             print('Image "%s" is not a valid RGBA PNG !' % path)
             return
         #
-        # Load pixels...
-        pix = im.load()
         list_val = []
+        _pix = im.pixel
+        _r = QtGui.qRed
+        _g = QtGui.qGreen
+        _b = QtGui.qBlue
+        _a = QtGui.qAlpha
         #
-        for i in range(im.size[1]):
-            for j in range(im.size[0]):
-                rgba = pix[j, i]
-                for v in rgba:
+        for i in range(im.width()):
+            for j in range(im.height()):
+                #
+                rgba = _pix(j, i)
+                #
+                for v in [_r(rgba), _g(rgba), _b(rgba), _a(rgba)]:
                     if v and v != 255:
                         list_val.append(unichr(v))
+                    # If this color is 0 or 255, the rest of the pixel is blank.
+                    else:
+                        break
+                #
         #
         if decrypt: # If the text MUST be decrypted.
             final = re.sub('[<[{(]?#[)}\]>]?[0-9a-zA-Z ]*:[0-9a-zA-Z ]*:[0-9a-zA-Z ]*[<[{(]?#[)}\]>]?', '', ''.join(list_val))
