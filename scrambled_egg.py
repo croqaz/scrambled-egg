@@ -8,6 +8,9 @@
 
 import os, sys
 import re, math
+import base64
+import quopri
+import bz2, zlib
 
 from Crypto.Cipher import AES
 from Crypto.Cipher import Blowfish
@@ -60,9 +63,9 @@ class ScrambledEgg():
         if pre == 'None':
             pass
         elif pre == 'ZLIB':
-            txt = txt.encode('zlib')
+            txt = zlib.compress(txt)
         elif pre == 'BZ2':
-            txt = txt.encode('bz2')
+            txt = bz2.compress(txt)
         elif pre == 'ROT13':
             try: txt = txt.encode('rot13')
             except: self.__error(1, pre, enc, post, 'L')
@@ -90,11 +93,11 @@ class ScrambledEgg():
             raise Exception('Invalid encryption mode !')
         #
         if post == 'Base64 Codec':
-            final = '<#>%s:%s:%s<#>' % (SCRAMBLE[pre], ENC[enc], ENCODE[post].replace(' Codec','')) + encrypted.encode('base64')
+            final = '<#>%s:%s:%s<#>' % (SCRAMBLE[pre], ENC[enc], ENCODE[post].replace(' Codec','')) + base64.b64encode(encrypted)
         elif post == 'HEX Codec':
             final = '<#>%s:%s:%s<#>' % (SCRAMBLE[pre], ENC[enc], ENCODE[post].replace(' Codec','')) + encrypted.encode('hex')
         elif post == 'Quopri Codec':
-            final = '<#>%s:%s:%s<#>' % (SCRAMBLE[pre], ENC[enc], ENCODE[post].replace(' Codec','')) + encrypted.encode('quopri_codec')
+            final = '<#>%s:%s:%s<#>' % (SCRAMBLE[pre], ENC[enc], ENCODE[post].replace(' Codec','')) + quopri.encodestring(encrypted)
         elif post == 'String Escape':
             final = '<#>%s:%s:%s<#>' % (SCRAMBLE[pre], ENC[enc], ENCODE[post]) + encrypted.encode('string_escape')
         elif post == 'UU Codec':
@@ -108,13 +111,13 @@ class ScrambledEgg():
     def decrypt(self, txt, pre, enc, post, pwd):
         #
         if pre == 'Base64 Codec':
-            try: txt = txt.decode('base64')
+            try: txt = base64.b64decode(txt)
             except: self.__error(1, pre, enc, post) ; return
         elif pre == 'HEX Codec':
             try: txt = txt.decode('hex')
             except: self.__error(1, pre, enc, post) ; return
         elif pre == 'Quopri Codec':
-            try: txt = txt.decode('quopri_codec')
+            try: txt = quopri.decodestring(txt)
             except: self.__error(1, pre, enc, post) ; return
         elif pre == 'String Escape':
             try: txt = txt.decode('string_escape')
@@ -145,10 +148,10 @@ class ScrambledEgg():
         if post == 'None':
             final = txt
         elif post == 'ZLIB':
-            try: final = txt.decode('zlib')
+            try: final = zlib.decompress(txt)
             except: self.__error(3, pre, enc, post) ; return
         elif post == 'BZ2':
-            try: final = txt.decode('bz2')
+            try: final = bz2.decompress(txt)
             except: self.__error(3, pre, enc, post) ; return
         elif post == 'ROT13':
             try: final = txt.decode('rot13')
@@ -173,9 +176,9 @@ class ScrambledEgg():
             val = txt[::-1]
         #
         # Calculate the edge of the square.
-        edge = int(math.ceil(math.sqrt(len(val)/4)))
+        edge = math.ceil(math.sqrt( float(len(val))/4 ))
         # Calculate blank pixels.
-        blank = (edge * edge - len(val)/4) / 2
+        blank = math.ceil((edge * edge - float(len(val))/4) / 2.0)
         # Explode the encrypted string.
         list_val = list(val)
         # New square image.
@@ -184,8 +187,8 @@ class ScrambledEgg():
         _pix = im.setPixel
         _rgba = QtGui.qRgba
         #
-        for i in range(edge):
-            for j in range(edge):
+        for i in range(int(edge)):
+            for j in range(int(edge)):
                 #
                 if blank:
                     blank -= 1
