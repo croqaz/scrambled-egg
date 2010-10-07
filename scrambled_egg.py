@@ -26,11 +26,15 @@ from PyQt4 import QtGui
 
 
 #
-SCRAMBLE = {'None':'N', 'ZLIB':'ZL', 'BZ2':'BZ', 'ROT13':'R'}
+SCRAMBLE = ['None', 'ROT13', 'ZLIB', 'BZ2']
+SCRAMBLE_D = {'None':'N', 'ROT13':'R', 'ZLIB':'ZL', 'BZ2':'BZ'}
 ENC = {'AES':'A', 'Blowfish':'B', 'CAST':'C', 'DES3':'D', 'None':'N'}
-ENCODE = {'Base64 Codec':'B', 'HEX Codec':'H', 'Quopri Codec':'Q', 'String Escape':'STR', 'UU Codec':'UU'}
+ENCODE = ['Base64 Codec', 'HEX Codec', 'Quopri Codec', 'String Escape', 'UU Codec', 'XML']
+ENCODE_D = {'Base64 Codec':'B64', 'HEX Codec':'H', 'Quopri Codec':'Q', 'String Escape':'STR', 'UU Codec':'UU', 'XML':'XML'}
+NO_TAGS = re.compile('[<[{(]?#[)}\]>]?([0-9a-zA-Z ]*:[0-9a-zA-Z ]*:[0-9a-zA-Z ]*)[<[{(/]{0,2}#[)}\]>]?')
 #
 
+# TODO : Export as XLM, UU, PICKLE, PNG.
 
 class ScrambledEgg():
 
@@ -93,15 +97,17 @@ class ScrambledEgg():
             raise Exception('Invalid encryption mode !')
         #
         if post == 'Base64 Codec':
-            final = '<#>%s:%s:%s<#>' % (SCRAMBLE[pre], ENC[enc], ENCODE[post].replace(' Codec','')) + base64.b64encode(encrypted)
+            final = '<#>%s:%s:%s<#>' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec','')) + base64.b64encode(encrypted)
         elif post == 'HEX Codec':
-            final = '<#>%s:%s:%s<#>' % (SCRAMBLE[pre], ENC[enc], ENCODE[post].replace(' Codec','')) + encrypted.encode('hex')
+            final = '<#>%s:%s:%s<#>' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec','')) + encrypted.encode('hex')
         elif post == 'Quopri Codec':
-            final = '<#>%s:%s:%s<#>' % (SCRAMBLE[pre], ENC[enc], ENCODE[post].replace(' Codec','')) + quopri.encodestring(encrypted)
+            final = '<#>%s:%s:%s<#>' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec','')) + quopri.encodestring(encrypted)
         elif post == 'String Escape':
-            final = '<#>%s:%s:%s<#>' % (SCRAMBLE[pre], ENC[enc], ENCODE[post]) + encrypted.encode('string_escape')
+            final = '<#>%s:%s:%s<#>' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post]) + encrypted.encode('string_escape')
         elif post == 'UU Codec':
-            final = '<#>%s:%s:%s<#>' % (SCRAMBLE[pre], ENC[enc], ENCODE[post].replace(' Codec','')) + encrypted.encode('uu')
+            final = '<#>%s:%s:%s<#>' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec','')) + encrypted.encode('uu')
+        elif post == 'XML':
+            final = '<root>\n<#>%s:%s:%s</#>\n<data>%s</data>\n</root>' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post], base64.b64encode(encrypted))
         else:
             raise Exception('Invalid codec !')
         #
@@ -109,6 +115,8 @@ class ScrambledEgg():
         #
 
     def decrypt(self, txt, pre, enc, post, pwd):
+        #
+        txt = re.sub(NO_TAGS, '', txt)
         #
         if pre == 'Base64 Codec':
             try: txt = base64.b64decode(txt)
@@ -124,6 +132,15 @@ class ScrambledEgg():
             except: self.__error(1, pre, enc, post) ; return
         elif pre == 'UU Codec':
             try: txt = txt.decode('uu')
+            except: self.__error(1, pre, enc, post) ; return
+        elif pre == 'XML':
+            try:
+                txt = txt.replace('\n', '')
+                txt = txt.replace('<root>', '')
+                txt = txt.replace('</root>', '')
+                txt = txt.replace('<data>', '')
+                txt = txt.replace('</data>', '')
+                txt = base64.b64decode(txt)
             except: self.__error(1, pre, enc, post) ; return
         else:
             raise Exception('Invalid codec !')
@@ -248,15 +265,15 @@ class ScrambledEgg():
                         break
                 #
         #
-        if decrypt: # If the text MUST be decrypted.
-            final = re.sub('[<[{(]?#[)}\]>]?[0-9a-zA-Z ]*:[0-9a-zA-Z ]*:[0-9a-zA-Z ]*[<[{(]?#[)}\]>]?', '', ''.join(list_val))
+        # If the text MUST be decrypted.
+        if decrypt:
             val = self.decrypt(final, pre, enc, post, pwd)
-            #
             if not val:
                 print(self.error)
             else:
                 return val
-        else: # Else, don't decrypt.
+        # Else, don't decrypt.
+        else:
             val = ''.join(list_val)
             return val
         #
@@ -368,7 +385,7 @@ class Window(QtGui.QMainWindow):
         # Pre combo-boxes.
         self.preProcess.setToolTip('Select pre-process')
         self.postDecrypt.setToolTip('Select post-decrypt')
-        for scramble in sorted(SCRAMBLE.keys()):
+        for scramble in SCRAMBLE:
             self.preProcess.addItem(scramble, scramble)
             self.postDecrypt.addItem(scramble, scramble)
         #
@@ -382,7 +399,7 @@ class Window(QtGui.QMainWindow):
         # Post combo-boxes.
         self.postProcess.setToolTip('Select post-process')
         self.preDecrypt.setToolTip('Select pre-decrypt')
-        for encode in sorted(ENCODE.keys()):
+        for encode in ENCODE:
             self.postProcess.addItem(encode, encode)
             self.preDecrypt.addItem(encode, encode)
         #
@@ -534,11 +551,10 @@ class Window(QtGui.QMainWindow):
         txt = self.rightText.toPlainText()
         #
         try:
-            info = re.search('[<[{(]?#[)}\]>]?([0-9a-zA-Z ]*:[0-9a-zA-Z ]*:[0-9a-zA-Z ]*)[<[{(]?#[)}\]>]?', txt).group(1)
+            info = re.search(NO_TAGS, txt).group(1)
             self.postDecrypt.setCurrentIndex( self.postDecrypt.findText(info.split(':')[0], QtCore.Qt.MatchFlag(QtCore.Qt.MatchContains)) )
             self.comboDecrypt.setCurrentIndex( self.comboDecrypt.findText(info.split(':')[1], QtCore.Qt.MatchFlag(QtCore.Qt.MatchContains)) )
             self.preDecrypt.setCurrentIndex( self.preDecrypt.findText(info.split(':')[2], QtCore.Qt.MatchFlag(QtCore.Qt.MatchContains)) )
-            txt = re.sub('[<[{(]?#[)}\]>]?[0-9a-zA-Z ]*:[0-9a-zA-Z ]*:[0-9a-zA-Z ]*[<[{(]?#[)}\]>]?', '', txt)
         except:
             pass
         #
