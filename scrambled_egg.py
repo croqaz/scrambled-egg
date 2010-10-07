@@ -34,7 +34,6 @@ ENCODE_D = {'Base64 Codec':'64', 'Base32 Codec':'32', 'HEX Codec':'H', 'Quopri C
 NO_TAGS = re.compile('[<[{(]?#[)}\]>]?([0-9a-zA-Z ]*:[0-9a-zA-Z ]*:[0-9a-zA-Z ]*)[<[{(/]{0,2}#[)}\]>]?')
 #
 
-# TODO : Export as XLM, UU, PICKLE, PNG.
 
 class ScrambledEgg():
 
@@ -74,7 +73,7 @@ class ScrambledEgg():
             try: txt = txt.encode('rot13')
             except: self.__error(1, pre, enc, post, 'L')
         else:
-            raise Exception('Invalid scramble !')
+            raise Exception('Invalid scramble "%s" !' % pre)
         #
         L = len(txt)
         txt += 'X' * ( (((L/16)+1)*16) - L )
@@ -94,7 +93,7 @@ class ScrambledEgg():
         elif enc == 'None':
             encrypted = txt
         else:
-            raise Exception('Invalid encryption mode !')
+            raise Exception('Invalid encryption mode "%s" !' % enc)
         #
         if post == 'Base64 Codec':
             if tags:
@@ -132,16 +131,28 @@ class ScrambledEgg():
             else:
                 final = '<root>\n<data>%s</data>\n</root>' % base64.b64encode(encrypted)
         else:
-            raise Exception('Invalid codec !')
+            raise Exception('Invalid codec "%s" !' % post)
         #
         return final
         #
 
     def decrypt(self, txt, pre, enc, post, pwd):
         #
-        txt = re.sub(NO_TAGS, '', txt)
+        try:
+            info = re.search(NO_TAGS, txt).group(1)
+            txt = txt.replace(info, '')
+            if not pre:
+                pre = info.split(':')[2]
+            if not enc:
+                enc = info.split(':')[1]
+            if not post:
+                post = info.split(':')[0]
+        except:
+            pass
         #
-        if pre == 'Base64 Codec':
+        if not pre:
+            self.__error(1, 'None', enc, post) ; return
+        elif pre == 'Base64 Codec':
             try: txt = base64.b64decode(txt)
             except: self.__error(1, pre, enc, post) ; return
         elif pre == 'Base32 Codec':
@@ -169,7 +180,7 @@ class ScrambledEgg():
                 txt = base64.b64decode(txt)
             except: self.__error(1, pre, enc, post) ; return
         else:
-            raise Exception('Invalid codec !')
+            raise Exception('Invalid codec "%s" !' % pre)
         #
         if enc == 'AES':
             o = AES.new(pwd)
@@ -182,7 +193,7 @@ class ScrambledEgg():
         elif enc == 'None':
             txt = txt.rstrip('X')
         else:
-            raise Exception('Invalid decrypt !')
+            raise Exception('Invalid decrypt "%s" !' % enc)
         #
         if enc != 'None':
             try: txt = o.decrypt(txt).rstrip('X')
@@ -200,7 +211,7 @@ class ScrambledEgg():
             try: final = txt.decode('rot13')
             except: self.__error(3, pre, enc, post) ; return
         else:
-            raise Exception('Invalid scramble !')
+            raise Exception('Invalid scramble "%s" !' % post)
         #
         return final
         #
