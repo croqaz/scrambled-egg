@@ -13,8 +13,8 @@ import quopri
 import bz2, zlib
 
 from Crypto.Cipher import AES
+from Crypto.Cipher import ARC2
 from Crypto.Cipher import Blowfish
-from Crypto.Cipher import CAST
 from Crypto.Cipher import DES3
 
 import sip
@@ -28,7 +28,7 @@ from PyQt4 import QtGui
 #
 SCRAMBLE = ['None', 'ROT13', 'ZLIB', 'BZ2']
 SCRAMBLE_D = {'None':'N', 'ROT13':'R', 'ZLIB':'ZL', 'BZ2':'BZ'}
-ENC = {'AES':'A', 'Blowfish':'B', 'CAST':'C', 'DES3':'D', 'None':'N'}
+ENC = {'AES':'A', 'ARC2':'AR', 'Blowfish':'B', 'DES3':'D', 'None':'N'}
 ENCODE = ['Base64 Codec', 'Base32 Codec', 'HEX Codec', 'Quopri Codec', 'String Escape', 'UU Codec', 'XML']
 ENCODE_D = {'Base64 Codec':'64', 'Base32 Codec':'32', 'HEX Codec':'H', 'Quopri Codec':'Q', 'String Escape':'STR', 'UU Codec':'UU', 'XML':'XML'}
 NO_TAGS = re.compile('[<[{(]?#[)}\]>]?([0-9a-zA-Z ]*:[0-9a-zA-Z ]*:[0-9a-zA-Z ]*)[<[{(/]{0,2}#[)}\]>]?')
@@ -61,7 +61,28 @@ class ScrambledEgg():
     def encrypt(self, txt, pre, enc, post, pwd, tags=True):
         #
         L = len(pwd)
-        pwd += 'X' * ( (((L/16)+1)*16) - L )
+        #
+        if enc=='AES':
+            # MAXIMUM 32 characters for AES !
+            if L == 32:
+                pass
+            elif L > 32:
+                pwd = pwd[:32]
+                print('WARNING! Password trimmed to 32 characters for AES!')
+            else:
+                pwd += 'X' * ( (((L/16)+1)*16) - L )
+        elif enc=='DES3':
+            # MAXIMUM 24 characters for DES3 !
+            if L == 24:
+                pass
+            elif L > 24:
+                pwd = pwd[:24]
+                print('WARNING! Password trimmed to 24 characters for DES3!')
+            else:
+                pwd += 'X' * ( (((L/24)+1)*24) - L )
+        else:
+            # X 8 characters for the rest.
+            pwd += 'X' * ( (((L/8)+1)*8) - L )
         #
         if pre == 'None':
             pass
@@ -81,11 +102,11 @@ class ScrambledEgg():
         if enc == 'AES':
             o = AES.new(pwd)
             encrypted = o.encrypt(txt)
+        elif enc == 'ARC2':
+            o = ARC2.new(pwd)
+            encrypted = o.encrypt(txt)
         elif enc == 'Blowfish':
             o = Blowfish.new(pwd)
-            encrypted = o.encrypt(txt)
-        elif enc == 'CAST':
-            o = CAST.new(pwd)
             encrypted = o.encrypt(txt)
         elif enc == 'DES3':
             o = DES3.new(pwd)
@@ -184,10 +205,10 @@ class ScrambledEgg():
         #
         if enc == 'AES':
             o = AES.new(pwd)
+        elif enc == 'ARC2':
+            o = ARC2.new(pwd)
         elif enc == 'Blowfish':
             o = Blowfish.new(pwd)
-        elif enc == 'CAST':
-            o = CAST.new(pwd)
         elif enc == 'DES3':
             o = DES3.new(pwd)
         elif enc == 'None':
@@ -347,8 +368,8 @@ class Window(QtGui.QMainWindow):
         Init function.
         '''
         super(Window, self).__init__()
-        self.resize(800, 600)
-        self.setWindowTitle('Live Crypt')
+        self.resize(800, 400)
+        self.setWindowTitle('Scrambled Egg :: Live Crypt')
         QtGui.QApplication.setStyle(QtGui.QStyleFactory.create('CleanLooks'))
         QtGui.QApplication.setPalette(QtGui.QApplication.style().standardPalette())
         self.SE = ScrambledEgg()
