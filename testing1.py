@@ -4,10 +4,10 @@ import random
 from time import clock
 import scrambled_egg
 
-#path = '/media/Data/DataBase'
-path = r'd:\Pictures\Ficr'
+path = '/media/Data/DataBase'
+#path = r'd:\Pictures\Ficr'
 
-files = glob.glob(path+'/*.jpg')
+files = glob.glob(path+'/*.*t*')
 try: os.mkdir(path+'/segg_test')
 except: pass
 
@@ -22,7 +22,7 @@ s = scrambled_egg.ScrambledEgg()
 
 def RandPassword(enc):
     # Returns a random password.
-    L = random.randrange(3, 54)
+    L = random.randrange(3, 99)
     pwd = []
     #
     for i in range(L):
@@ -52,10 +52,11 @@ for f in files:
                 final = s.encrypt(open(f, 'rb').read(), pre, enc, post, RandPassword(enc))
                 g = open('%s/segg_test/%s_%s_%s_%s.segg' % (path, pre, enc, post, fname), 'wb')
                 g.write(final)
+                g.close()
                 tf = clock()-ti
                 SPEEDs[pre+' '+enc+' '+post] = tf
                 SIZEs[pre+' '+enc+' '+post] = os.path.getsize(g.name)
-                g.close() ; del g
+                del g
     #
     inv_SPEEDs = dict([[v,k] for k,v in SPEEDs.items()])
     inv_SIZEs = dict([[v,k] for k,v in SIZEs.items()])

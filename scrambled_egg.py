@@ -10,6 +10,7 @@ import os, sys
 import re, math
 import base64
 import quopri
+import hashlib
 import bz2, zlib
 
 from Crypto.Cipher import AES
@@ -67,22 +68,28 @@ class ScrambledEgg():
             if L == 32:
                 pass
             elif L > 32:
-                pwd = pwd[:32]
-                print('WARNING! Password trimmed to 32 characters for AES!')
+                pwd = hashlib.sha256(pwd).digest()
             else:
                 pwd += 'X' * ( (((L/16)+1)*16) - L )
+        elif enc=='Blowfish':
+            # MAXIMUM 56 characters for Blowfish !
+            if L == 56:
+                pass
+            elif L > 56:
+                pwd = hashlib.sha224(pwd).hexdigest()
+            else:
+                pwd += 'X' * ( (((L/8)+1)*8) - L )
         elif enc=='DES3':
             # MAXIMUM 24 characters for DES3 !
             if L == 24:
                 pass
             elif L > 24:
-                pwd = pwd[:24]
-                print('WARNING! Password trimmed to 24 characters for DES3!')
+                pwd = hashlib.sha1('a').digest()+'XXXX'
             else:
                 pwd += 'X' * ( (((L/24)+1)*24) - L )
-        else:
-            # X 8 characters for the rest.
-            pwd += 'X' * ( (((L/8)+1)*8) - L )
+        elif not pwd:
+            # Only for NULL passwords.
+            pwd = 'X'
         #
         if pre == 'None':
             pass
@@ -97,7 +104,7 @@ class ScrambledEgg():
             raise Exception('Invalid scramble "%s" !' % pre)
         #
         L = len(txt)
-        txt += 'X' * ( (((L/16)+1)*16) - L )
+        txt += ' ' * ( (((L/16)+1)*16) - L )
         #
         if enc == 'AES':
             o = AES.new(pwd)
@@ -217,7 +224,7 @@ class ScrambledEgg():
             raise Exception('Invalid decrypt "%s" !' % enc)
         #
         if enc != 'None':
-            try: txt = o.decrypt(txt).rstrip('X')
+            try: txt = o.decrypt(txt).rstrip(' ')
             except: self.__error(2, pre, enc, post) ; return
         #
         if post == 'None':
@@ -749,6 +756,4 @@ if __name__ == '__main__':
     sys.exit(app.exec_())
 
 # Eof()
-
-
 
