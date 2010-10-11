@@ -8,8 +8,9 @@
 
 import os, sys
 import re, math
+import string
 import base64
-import quopri
+import binascii as ba
 import hashlib
 import bz2, zlib
 
@@ -26,6 +27,8 @@ from PyQt4 import QtCore
 from PyQt4 import QtGui
 
 
+#
+ROT = string.maketrans('nopqrstuvwxyzabcdefghijklmNOPQRSTUVWXYZABCDEFGHIJKLM', 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
 #
 SCRAMBLE = ['None', 'ROT13', 'ZLIB', 'BZ2']
 SCRAMBLE_D = {'None':'N', 'ROT13':'R', 'ZLIB':'ZL', 'BZ2':'BZ'}
@@ -59,7 +62,7 @@ class ScrambledEgg():
             self.error = '  Encryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post)
         #
 
-    def encrypt(self, txt, pre, enc, post, pwd, tags=True):
+    def _fix_password(self, pwd, enc):
         #
         L = len(pwd)
         #
@@ -84,12 +87,17 @@ class ScrambledEgg():
             if L == 24:
                 pass
             elif L > 24:
-                pwd = hashlib.sha1('a').digest()+'XXXX'
+                pwd = 'XX' + hashlib.sha1('a').digest() + 'XX'
             else:
                 pwd += 'X' * ( (((L/24)+1)*24) - L )
         elif not pwd:
             # Only for NULL passwords.
             pwd = 'X'
+        #
+        return pwd
+        #
+
+    def encrypt(self, txt, pre, enc, post, pwd, tags=True):
         #
         if pre == 'None':
             pass
@@ -98,11 +106,11 @@ class ScrambledEgg():
         elif pre == 'BZ2':
             txt = bz2.compress(txt)
         elif pre == 'ROT13':
-            try: txt = txt.encode('rot13')
-            except: self.__error(1, pre, enc, post, 'L')
+            txt = string.translate(txt, ROT)
         else:
             raise Exception('Invalid scramble "%s" !' % pre)
         #
+        pwd = self._fix_password(pwd, enc)
         L = len(txt)
         txt += ' ' * ( (((L/16)+1)*16) - L )
         #
@@ -125,9 +133,9 @@ class ScrambledEgg():
         #
         if post == 'Base64 Codec':
             if tags:
-                final = '<#>%s:%s:%s<#>%s' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec',''), base64.b64encode(encrypted))
+                final = '<#>%s:%s:%s<#>%s' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec',''), ba.b2a_base64(encrypted))
             else:
-                final = base64.b64encode(encrypted)
+                final = ba.b2a_base64(encrypted)
         elif post == 'Base32 Codec':
             if tags:
                 final = '<#>%s:%s:%s<#>%s' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec',''), base64.b32encode(encrypted))
@@ -135,14 +143,14 @@ class ScrambledEgg():
                 final = base64.b32encode(encrypted)
         elif post == 'HEX Codec':
             if tags:
-                final = '<#>%s:%s:%s<#>%s' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec',''), encrypted.encode('hex'))
+                final = '<#>%s:%s:%s<#>%s' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec',''), ba.b2a_hex(encrypted))
             else:
-                final = encrypted.encode('hex')
+                final = ba.b2a_hex(encrypted)
         elif post == 'Quopri Codec':
             if tags:
-                final = '<#>%s:%s:%s<#>%s' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec',''), quopri.encodestring(encrypted))
+                final = '<#>%s:%s:%s<#>%s' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec',''), ba.b2a_qp(encrypted, quotetabs=True, header=True))
             else:
-                final = quopri.encodestring(encrypted)
+                final = ba.b2a_qp(encrypted, quotetabs=True, header=True)
         elif post == 'String Escape':
             if tags:
                 final = '<#>%s:%s:%s<#>%s' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post], encrypted.encode('string_escape'))
@@ -155,9 +163,9 @@ class ScrambledEgg():
                 final = encrypted.encode('uu')
         elif post == 'XML':
             if tags:
-                final = '<root>\n<#>%s:%s:%s</#>\n<data>%s</data>\n</root>' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post], base64.b64encode(encrypted))
+                final = '<root>\n<#>%s:%s:%s</#>\n<data>%s</data>\n</root>' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post], ba.b2a_base64(encrypted))
             else:
-                final = '<root>\n<data>%s</data>\n</root>' % base64.b64encode(encrypted)
+                final = '<root>\n<data>%s</data>\n</root>' % ba.b2a_base64(encrypted)
         else:
             raise Exception('Invalid codec "%s" !' % post)
         #
@@ -166,9 +174,11 @@ class ScrambledEgg():
 
     def decrypt(self, txt, pre, enc, post, pwd):
         #
+        pwd = self._fix_password(pwd, enc)
+        #
         try:
             info = re.search(NO_TAGS, txt).group(1)
-            txt = txt.replace(info, '')
+            txt = re.sub(NO_TAGS, '', txt)
             if not pre:
                 pre = info.split(':')[2]
             if not enc:
@@ -181,16 +191,16 @@ class ScrambledEgg():
         if not pre:
             self.__error(1, 'None', enc, post) ; return
         elif pre == 'Base64 Codec':
-            try: txt = base64.b64decode(txt)
+            try: txt = ba.a2b_base64(txt)
             except: self.__error(1, pre, enc, post) ; return
         elif pre == 'Base32 Codec':
             try: txt = base64.b32decode(txt)
             except: self.__error(1, pre, enc, post) ; return
         elif pre == 'HEX Codec':
-            try: txt = txt.decode('hex')
+            try: txt = ba.a2b_hex(txt)
             except: self.__error(1, pre, enc, post) ; return
         elif pre == 'Quopri Codec':
-            try: txt = quopri.decodestring(txt)
+            try: txt = ba.a2b_qp(q_txt, header=True)
             except: self.__error(1, pre, enc, post) ; return
         elif pre == 'String Escape':
             try: txt = txt.decode('string_escape')
@@ -205,7 +215,7 @@ class ScrambledEgg():
                 txt = txt.replace('</root>', '')
                 txt = txt.replace('<data>', '')
                 txt = txt.replace('</data>', '')
-                txt = base64.b64decode(txt)
+                txt = ba.a2b_base64(txt)
             except: self.__error(1, pre, enc, post) ; return
         else:
             raise Exception('Invalid codec "%s" !' % pre)
@@ -219,7 +229,7 @@ class ScrambledEgg():
         elif enc == 'DES3':
             o = DES3.new(pwd)
         elif enc == 'None':
-            txt = txt.rstrip('X')
+            txt = txt.rstrip(' ')
         else:
             raise Exception('Invalid decrypt "%s" !' % enc)
         #
@@ -236,8 +246,7 @@ class ScrambledEgg():
             try: final = bz2.decompress(txt)
             except: self.__error(3, pre, enc, post) ; return
         elif post == 'ROT13':
-            try: final = txt.decode('rot13')
-            except: self.__error(3, pre, enc, post) ; return
+            final = string.translate(txt, ROT)
         else:
             raise Exception('Invalid scramble "%s" !' % post)
         #
@@ -640,9 +649,6 @@ class Window(QtGui.QMainWindow):
         if not self.buttonDecryptMode.isChecked() or not self.rightText.toPlainText():
             return
         #
-        pwd = self.linePasswordR.text()
-        L = len(pwd)
-        pwd += 'X' * ( (((L/16)+1)*16) - L )
         txt = self.rightText.toPlainText()
         #
         try:
@@ -657,6 +663,7 @@ class Window(QtGui.QMainWindow):
         pre = self.preDecrypt.currentText()
         enc = self.comboDecrypt.currentText()
         post = self.postDecrypt.currentText()
+        pwd = self.linePasswordR.text()
         #
         if self.buttonDecryptMode.isChecked():
             self.statusBar.setStyleSheet('color: blue;')
