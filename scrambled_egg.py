@@ -16,6 +16,7 @@ import bz2, zlib
 
 from Crypto.Cipher import AES
 from Crypto.Cipher import ARC2
+from Crypto.Cipher import CAST
 from Crypto.Cipher import Blowfish
 from Crypto.Cipher import DES3
 
@@ -32,10 +33,14 @@ ROT = string.maketrans('nopqrstuvwxyzabcdefghijklmNOPQRSTUVWXYZABCDEFGHIJKLM', '
 #
 SCRAMBLE = ['None', 'ROT13', 'ZLIB', 'BZ2']
 SCRAMBLE_D = {'None':'N', 'ROT13':'R', 'ZLIB':'ZL', 'BZ2':'BZ'}
-ENC = {'AES':'A', 'ARC2':'AR', 'Blowfish':'B', 'DES3':'D', 'None':'N'}
+ENC = {'AES':'AE', 'ARC2':'AR', 'CAST':'CA', 'Blowfish':'B', 'DES3':'D', 'None':'N'}
 ENCODE = ['Base64 Codec', 'Base32 Codec', 'HEX Codec', 'Quopri Codec', 'String Escape', 'UU Codec', 'XML']
 ENCODE_D = {'Base64 Codec':'64', 'Base32 Codec':'32', 'HEX Codec':'H', 'Quopri Codec':'Q', 'String Escape':'STR', 'UU Codec':'UU', 'XML':'XML'}
-NO_TAGS = re.compile('[<[{(]?#[)}\]>]?([0-9a-zA-Z ]*:[0-9a-zA-Z ]*:[0-9a-zA-Z ]*)[<[{(/]{0,2}#[)}\]>]?')
+NO_TAGS = re.compile(
+    '<#>(?P<ts>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})</?#>|' \
+    '\[#\](?P<tq>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})\[#\]|' \
+    '\{#\}(?P<ta>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})\{#\}|' \
+    '\(#\)(?P<tp>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})\(#\)')
 #
 
 
@@ -66,7 +71,7 @@ class ScrambledEgg():
         #
         L = len(pwd)
         #
-        if enc=='AES':
+        if enc == 'AES' or enc == ENC['AES']:
             # MAXIMUM 32 characters for AES !
             if L == 32:
                 pass
@@ -74,7 +79,15 @@ class ScrambledEgg():
                 pwd = hashlib.sha256(pwd).digest()
             else:
                 pwd += 'X' * ( (((L/16)+1)*16) - L )
-        elif enc=='Blowfish':
+        if enc == 'CAST' or enc == ENC['CAST']:
+            # MAXIMUM 8 characters for CAST !
+            if L == 8:
+                pass
+            elif L > 8:
+                pwd = hashlib.md5(pwd).digest()
+            else:
+                pwd += 'X' * ( (((L/8)+1)*8) - L )
+        if enc == 'Blowfish' or enc == ENC['Blowfish']:
             # MAXIMUM 56 characters for Blowfish !
             if L == 56:
                 pass
@@ -82,12 +95,12 @@ class ScrambledEgg():
                 pwd = hashlib.sha224(pwd).hexdigest()
             else:
                 pwd += 'X' * ( (((L/8)+1)*8) - L )
-        elif enc=='DES3':
+        if enc == 'DES3' or enc == ENC['DES3']:
             # MAXIMUM 24 characters for DES3 !
             if L == 24:
                 pass
             elif L > 24:
-                pwd = 'XX' + hashlib.sha1('a').digest() + 'XX'
+                pwd = 'XX' + hashlib.sha1(pwd).digest() + 'XX'
             else:
                 pwd += 'X' * ( (((L/24)+1)*24) - L )
         elif not pwd:
@@ -119,6 +132,9 @@ class ScrambledEgg():
             encrypted = o.encrypt(txt)
         elif enc == 'ARC2':
             o = ARC2.new(pwd)
+            encrypted = o.encrypt(txt)
+        elif enc == 'CAST':
+            o = CAST.new(pwd)
             encrypted = o.encrypt(txt)
         elif enc == 'Blowfish':
             o = Blowfish.new(pwd)
@@ -174,10 +190,9 @@ class ScrambledEgg():
 
     def decrypt(self, txt, pre, enc, post, pwd):
         #
-        pwd = self._fix_password(pwd, enc)
-        #
         try:
-            info = re.search(NO_TAGS, txt).group(1)
+            re_groups = re.search(NO_TAGS, txt).groups()
+            info = re_groups[0] or re_groups[1] or re_groups[2] or re_groups[3]
             txt = re.sub(NO_TAGS, '', txt)
             if not pre:
                 pre = info.split(':')[2]
@@ -188,24 +203,26 @@ class ScrambledEgg():
         except:
             pass
         #
+        pwd = self._fix_password(pwd, enc)
+        #
         if not pre:
             self.__error(1, 'None', enc, post) ; return
-        elif pre == 'Base64 Codec':
+        elif pre == 'Base64 Codec' or pre == ENCODE_D['Base64 Codec']:
             try: txt = ba.a2b_base64(txt)
             except: self.__error(1, pre, enc, post) ; return
-        elif pre == 'Base32 Codec':
+        elif pre == 'Base32 Codec' or pre == ENCODE_D['Base32 Codec']:
             try: txt = base64.b32decode(txt)
             except: self.__error(1, pre, enc, post) ; return
-        elif pre == 'HEX Codec':
+        elif pre == 'HEX Codec' or pre == ENCODE_D['HEX Codec']:
             try: txt = ba.a2b_hex(txt)
             except: self.__error(1, pre, enc, post) ; return
-        elif pre == 'Quopri Codec':
+        elif pre == 'Quopri Codec' or pre == ENCODE_D['Quopri Codec']:
             try: txt = ba.a2b_qp(q_txt, header=True)
             except: self.__error(1, pre, enc, post) ; return
-        elif pre == 'String Escape':
+        elif pre == 'String Escape'  or pre == ENCODE_D['String Escape']:
             try: txt = txt.decode('string_escape')
             except: self.__error(1, pre, enc, post) ; return
-        elif pre == 'UU Codec':
+        elif pre == 'UU Codec'  or pre == ENCODE_D['UU Codec']:
             try: txt = txt.decode('uu')
             except: self.__error(1, pre, enc, post) ; return
         elif pre == 'XML':
@@ -220,15 +237,17 @@ class ScrambledEgg():
         else:
             raise Exception('Invalid codec "%s" !' % pre)
         #
-        if enc == 'AES':
+        if enc == 'AES' or enc == ENC['AES']:
             o = AES.new(pwd)
-        elif enc == 'ARC2':
+        elif enc == 'ARC2' or enc == ENC['ARC2']:
             o = ARC2.new(pwd)
-        elif enc == 'Blowfish':
+        elif enc == 'CAST' or enc == ENC['CAST']:
+            o = CAST.new(pwd)
+        elif enc == 'Blowfish' or enc == ENC['Blowfish']:
             o = Blowfish.new(pwd)
-        elif enc == 'DES3':
+        elif enc == 'DES3' or enc == ENC['DES3']:
             o = DES3.new(pwd)
-        elif enc == 'None':
+        elif not enc or enc == 'None':
             txt = txt.rstrip(' ')
         else:
             raise Exception('Invalid decrypt "%s" !' % enc)
@@ -237,15 +256,15 @@ class ScrambledEgg():
             try: txt = o.decrypt(txt).rstrip(' ')
             except: self.__error(2, pre, enc, post) ; return
         #
-        if post == 'None':
+        if not post or post == 'None':
             final = txt
-        elif post == 'ZLIB':
+        elif post == 'ZLIB' or post == SCRAMBLE_D['ZLIB']:
             try: final = zlib.decompress(txt)
             except: self.__error(3, pre, enc, post) ; return
-        elif post == 'BZ2':
+        elif post == 'BZ2' or post == SCRAMBLE_D['BZ2']:
             try: final = bz2.decompress(txt)
             except: self.__error(3, pre, enc, post) ; return
-        elif post == 'ROT13':
+        elif post == 'ROT13' or post == SCRAMBLE_D['ROT13']:
             final = string.translate(txt, ROT)
         else:
             raise Exception('Invalid scramble "%s" !' % post)

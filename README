@@ -17,7 +17,7 @@
 ----------
 
  - easily encrypt your data using AES, Blowfish, CAST, or DES3, then encode the result
-    in a printable form, using Base64, HEX, Quopri, string escape, or UU;
+    in a printable form, using Base64, Base32, HEX, Quopri, string escape, UU or XML;
  - the resulted string can be sent on e-mail as text, saved as XML or UU, or can be
     transformed into a little PNG image;
  - website : http://scrambled-egg.googlecode.com
@@ -44,14 +44,25 @@
   Requirements:
 -----------------
  * Python 2.6. Scrambled-Egg is written entirely in Python 2.6. (www.python.org)
- * Python Crypto. Data is crypted AES, Blowfish, CAST, or DES3. (www.pycrypto.org)
+ * Python Crypto. Data is crypted AES, ARC2, Blowfish, CAST, or DES3. (www.pycrypto.org)
  * PyQt4. Graphical user interface with Qt. (www.riverbankcomputing.co.uk/software/pyqt)
 
 ---------------
   How to use:
 ---------------
- * In order to access Scrambled-Egg class, all you have to do is : "import scrambled_egg".
  * Graphical user interface can be accesed by opening "scrambled_egg.py" directly.
+ * In order to access Scrambled-Egg class, all you have to do is : "import scrambled_egg".
  * Tested on Windows and Ubuntu.
+
+---------------
+  What's new:
+---------------
+ * Version 0.2 brings quite some changes :
+    - a lot of bug fixes;
+    - stability obtained after MASSIVE testing;
+    - all operations are faster;
+    - added ARC2 encryption, Base32 and XML encodings;
+    - import and export operations directly from GUI;
+    - checkbox to show and hide pre/enc/post tags in resulted text.
 
 Eof()
