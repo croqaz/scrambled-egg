@@ -25,7 +25,7 @@
 ------------
   Licence:
 ------------
-  Scrambled-Egg is copyright © 2010, Cristi Constantin. All rights reserved.
+  Scrambled-Egg is copyright © 2010-2011, Cristi Constantin. All rights reserved.
 
   This program is free software: you can redistribute it and/or modify it under the terms
   of the GNU General Public License as published by the Free Software Foundation, either
@@ -44,7 +44,7 @@
   Requirements:
 -----------------
  * Python 2.6. Scrambled-Egg is written entirely in Python 2.6. (www.python.org)
- * Python Crypto. Data is crypted AES, ARC2, Blowfish, CAST, or DES3. (www.pycrypto.org)
+ * Python Crypto. Data is crypted in AES, Blowfish, DES3, etc. (www.pycrypto.org)
  * PyQt4. Graphical user interface with Qt. (www.riverbankcomputing.co.uk/software/pyqt)
 
 ---------------
@@ -57,6 +57,10 @@
 ---------------
   What's new:
 ---------------
+ * Version 0.3 brings quite some changes :
+    - better encryption. All modes use CBC;
+    - images transformed with HEX codec are now 2x smaller than images transformed with Base64;
+
  * Version 0.2 brings quite some changes :
     - a lot of bug fixes;
     - stability obtained after MASSIVE testing;

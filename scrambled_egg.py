@@ -41,6 +41,10 @@ NO_TAGS = re.compile(
     '\[#\](?P<tq>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})\[#\]|' \
     '\{#\}(?P<ta>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})\{#\}|' \
     '\(#\)(?P<tp>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})\(#\)')
+# These numbers are used when creating PNG images.
+SCRAMBLE_NR = {'None':'1', 'ROT13':'2', 'ZLIB':'3', 'BZ2':'4'}
+ENCRYPT_NR = {'AES':'1', 'ARC2':'2', 'CAST':'3', 'Blowfish':'5', 'DES3':'4', 'None':'9'}
+ENCODE_NR = {'Base64 Codec':'4', 'Base32 Codec':'2', 'HEX Codec':'1', 'Quopri Codec':'9', 'String Escape':'6', 'UU Codec':'8', 'XML':'7'}
 #
 
 
@@ -112,6 +116,7 @@ class ScrambledEgg():
 
     def encrypt(self, txt, pre, enc, post, pwd, tags=True):
         #
+        # Scramble operation.
         if pre == 'None':
             pass
         elif pre == 'ZLIB':
@@ -127,26 +132,28 @@ class ScrambledEgg():
         L = len(txt)
         txt += ' ' * ( (((L/16)+1)*16) - L )
         #
+        # Encryption operation.
         if enc == 'AES':
-            o = AES.new(pwd)
+            o = AES.new(pwd, mode=2)
             encrypted = o.encrypt(txt)
         elif enc == 'ARC2':
-            o = ARC2.new(pwd)
+            o = ARC2.new(pwd, mode=2)
             encrypted = o.encrypt(txt)
         elif enc == 'CAST':
-            o = CAST.new(pwd)
+            o = CAST.new(pwd, mode=2)
             encrypted = o.encrypt(txt)
         elif enc == 'Blowfish':
-            o = Blowfish.new(pwd)
+            o = Blowfish.new(pwd, mode=2)
             encrypted = o.encrypt(txt)
         elif enc == 'DES3':
-            o = DES3.new(pwd)
+            o = DES3.new(pwd, mode=2)
             encrypted = o.encrypt(txt)
         elif enc == 'None':
             encrypted = txt
         else:
             raise Exception('Invalid encryption mode "%s" !' % enc)
         #
+        # Codec operation.
         if post == 'Base64 Codec':
             if tags:
                 final = '<#>%s:%s:%s<#>%s' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec',''), ba.b2a_base64(encrypted))
@@ -190,10 +197,12 @@ class ScrambledEgg():
 
     def decrypt(self, txt, pre, enc, post, pwd):
         #
+        # Trying to identify and/or delete `meta-tags`.
         try:
             re_groups = re.search(NO_TAGS, txt).groups()
             info = re_groups[0] or re_groups[1] or re_groups[2] or re_groups[3]
             txt = re.sub(NO_TAGS, '', txt)
+            # Identify here.
             if not pre:
                 pre = info.split(':')[2]
             if not enc:
@@ -203,8 +212,10 @@ class ScrambledEgg():
         except:
             pass
         #
+        # Adapting password for encryption.
         pwd = self._fix_password(pwd, enc)
         #
+        # Codec operation.
         if not pre:
             self.__error(1, 'None', enc, post) ; return
         elif pre == 'Base64 Codec' or pre == ENCODE_D['Base64 Codec']:
@@ -237,16 +248,17 @@ class ScrambledEgg():
         else:
             raise Exception('Invalid codec "%s" !' % pre)
         #
+        # Decryption operation.
         if enc == 'AES' or enc == ENC['AES']:
-            o = AES.new(pwd)
+            o = AES.new(pwd, mode=2)
         elif enc == 'ARC2' or enc == ENC['ARC2']:
-            o = ARC2.new(pwd)
+            o = ARC2.new(pwd, mode=2)
         elif enc == 'CAST' or enc == ENC['CAST']:
-            o = CAST.new(pwd)
+            o = CAST.new(pwd, mode=2)
         elif enc == 'Blowfish' or enc == ENC['Blowfish']:
-            o = Blowfish.new(pwd)
+            o = Blowfish.new(pwd, mode=2)
         elif enc == 'DES3' or enc == ENC['DES3']:
-            o = DES3.new(pwd)
+            o = DES3.new(pwd, mode=2)
         elif not enc or enc == 'None':
             txt = txt.rstrip(' ')
         else:
@@ -256,6 +268,7 @@ class ScrambledEgg():
             try: txt = o.decrypt(txt).rstrip(' ')
             except: self.__error(2, pre, enc, post) ; return
         #
+        # Un-scramble operation.
         if not post or post == 'None':
             final = txt
         elif post == 'ZLIB' or post == SCRAMBLE_D['ZLIB']:
@@ -273,51 +286,111 @@ class ScrambledEgg():
         #
 
     def toImage(self, txt, pre, enc, post, pwd, path, encrypt=True):
+        '''
+        Any information, text and/or files, can be encoded inside a little PNG image.
+        Depending on how you encode the crypted data, images come in 3 flavors: HEX, Base32 and Base64.
+        Each letter is transformed into a color from 1 to 255. Four colors become one pixel.
+        HEX encoding is `high density`. One pixel is made of 8 letters, instead of 4 letters.
+        '''
         #
+        # Input can be string, or file. If is file, read it.
         if str(type(txt)) == "<type 'file'>":
             txt.seek(0)
             txt = txt.read()
-        #
+
+        # Pre/ Enc/ Post information.
+        if post == 'HEX Codec':
+            first_pixel = '2'
+        else:
+            first_pixel = '1'
+        first_pixel += SCRAMBLE_NR[pre] + ENCRYPT_NR[enc] + ENCODE_NR[post]
+        
         if encrypt: # If text MUST be encrypted first.
             val = self.encrypt(txt, pre, enc, post, pwd)[::-1]
             if not val:
                 return
         else: # Else, the text is already encrypted.
             val = txt[::-1]
-        #
-        # Calculate the edge of the square.
-        edge = math.ceil(math.sqrt( float(len(val))/4 ))
-        # Calculate blank pixels.
-        blank = math.ceil((edge * edge - float(len(val))/4) / 2.0)
+        # Add Pre/ Enc/ Post information.
+        val += first_pixel
+        del first_pixel
+
+        # Calculate the edge of the square and blank square.
+        if post == 'HEX Codec':
+            edge = math.ceil(math.sqrt( float(len(val))/8.0 ))
+            blank = math.ceil((edge * edge - float(len(val))/8.0) / 2.0)
+        else:
+            edge = math.ceil(math.sqrt( float(len(val))/4.0 ))
+            blank = math.ceil((edge * edge - float(len(val))/4.0) / 2.0)
+
         # Explode the encrypted string.
         list_val = list(val)
         # New square image.
-        print('Creating new image, %ix%i, blank=%i, string to encode is %i characters.' % (edge, edge, blank, len(val)))
+        print('Creating new image, %ix%i, blank is %i, string to encode is %i characters.' % (edge, edge, blank, len(val)))
         im = QtGui.QImage(edge, edge, QtGui.QImage.Format_ARGB32)
         _pix = im.setPixel
         _rgba = QtGui.qRgba
-        #
-        for i in range(int(edge)):
-            for j in range(int(edge)):
-                #
-                if blank:
-                    blank -= 1
-                    _pix(j, i, _rgba(255, 255, 255, 255))
-                    continue
-                #
-                _r = _g = _b = _a = 255
-                #
-                if len(list_val) >= 1:
-                    _r = ord(list_val.pop())
-                if len(list_val) >= 1:
-                    _g = ord(list_val.pop())
-                if len(list_val) >= 1:
-                    _b = ord(list_val.pop())
-                if len(list_val) >= 1:
-                    _a = ord(list_val.pop())
-                #
-                _pix(j, i, _rgba(_r, _g, _b, _a))
-                #
+        _int = int
+        _ord = ord
+
+        # HEX is `high density`.
+        if post == 'HEX Codec':
+            for i in range(int(edge)):
+                for j in range(int(edge)):
+                    #
+                    _r = _g = _b = _a = 255
+                    #
+                    # Red
+                    if len(list_val) >= 2:
+                        _r = _int(list_val.pop()+list_val.pop(), 16)
+                    elif len(list_val) == 1:
+                        _r = _int(list_val.pop(), 16)
+                    #
+                    # Green
+                    if len(list_val) >= 2:
+                        _g = _int(list_val.pop()+list_val.pop(), 16)
+                    elif len(list_val) == 1:
+                        _g = _int(list_val.pop(), 16)
+                    #
+                    # Blue
+                    if len(list_val) >= 2:
+                        _b = _int(list_val.pop()+list_val.pop(), 16)
+                    elif len(list_val) == 1:
+                        _b = _int(list_val.pop(), 16)
+                    #
+                    # Alpha
+                    if len(list_val) >= 2:
+                        _a = _int(list_val.pop()+list_val.pop(), 16)
+                    elif len(list_val) == 1:
+                        _a = __int(list_val.pop(), 16)
+                    #
+                    _pix(j, i, _rgba(_r, _g, _b, _a))
+                    #
+
+        # Base 64 and Base 32.
+        else:
+            for i in range(int(edge)):
+                for j in range(int(edge)):
+                    #
+                    if blank:
+                        blank -= 1
+                        _pix(j, i, _rgba(255, 255, 255, 255))
+                        continue
+                    #
+                    _r = _g = _b = _a = 255
+                    #
+                    if len(list_val) >= 1:
+                        _r = _ord(list_val.pop())
+                    if len(list_val) >= 1:
+                        _g = _ord(list_val.pop())
+                    if len(list_val) >= 1:
+                        _b = _ord(list_val.pop())
+                    if len(list_val) >= 1:
+                        _a = _ord(list_val.pop())
+                    #
+                    _pix(j, i, _rgba(_r, _g, _b, _a))
+                    #
+
         #
         try:
             im.save(path, 'PNG', -1)
@@ -345,30 +418,80 @@ class ScrambledEgg():
         _b = QtGui.qBlue
         _a = QtGui.qAlpha
         #
+        first_pixel = 0
+        # Calculate first pixel.
         for i in range(im.width()):
             for j in range(im.height()):
                 #
-                rgba = _pix(j, i)
+                rgba0 = _pix(j, i)
+                # If it's not a blank pixel.
+                if rgba0 != 4294967295L:
+                    first_pixel = [_r(rgba0), _g(rgba0), _b(rgba0), _a(rgba0)]
+                    break
                 #
-                for v in [_r(rgba), _g(rgba), _b(rgba), _a(rgba)]:
-                    if v and v != 255:
-                        list_val.append(unichr(v))
-                    # If this color is 0 or 255, the rest of the pixel is blank.
-                    else:
-                        break
-                #
-        #
+            if first_pixel:
+                break
+
+        # Reverse number dictionaries.
+        reverse_s = dict(zip(SCRAMBLE_NR.values(), SCRAMBLE_NR.keys()))
+        reverse_ey = dict(zip(ENCRYPT_NR.values(), ENCRYPT_NR.keys()))
+        reverse_ed = dict(zip(ENCODE_NR.values(), ENCODE_NR.keys()))
+
+        # If not HD.
+        if first_pixel[3] == 49:
+            pre = reverse_ed[unichr(first_pixel[0])]
+            enc = reverse_ey[unichr(first_pixel[1])]
+            post = reverse_s[unichr(first_pixel[2])]
+
+        # If HD.
+        elif first_pixel[1] == 18 or first_pixel[1] == 34 or first_pixel[1] == 50 or first_pixel[1] == 66:
+            pixel = hex(int(first_pixel[0]))[-2:] + hex(int(first_pixel[1]))[-2:]
+            pre = reverse_ed[pixel[0]]
+            enc = reverse_ey[pixel[1]]
+            post = reverse_s[pixel[2]]
+
+        # For HEX.
+        if pre == 'HEX Codec':
+            for i in range(im.width()):
+                for j in range(im.height()):
+                    #
+                    rgba = _pix(j, i)
+                    #
+                    # For each channel in this pixel.
+                    for v in [_r(rgba), _g(rgba), _b(rgba), _a(rgba)]:
+                        if v < 16:
+                            list_val.append('0'+hex(v)[-1:])
+                        else:
+                            list_val.append(hex(v)[-2:])
+                    #
+
+        # For the rest.
+        else:
+            for i in range(im.width()):
+                for j in range(im.height()):
+                    #
+                    rgba = _pix(j, i)
+                    #
+                    for v in [_r(rgba), _g(rgba), _b(rgba), _a(rgba)]:
+                        if v and v != 255:
+                            list_val.append(unichr(v))
+                        # If this color is 0 or 255, the rest of the pixel is blank.
+                        else:
+                            break
+                    #
+
         # If the text MUST be decrypted.
         if decrypt:
-            val = self.decrypt(final, pre, enc, post, pwd)
+            val = self.decrypt(''.join(list_val), pre, enc, post, pwd)
             if not val:
                 print(self.error)
             else:
-                return val
+                return val[4:]
+
         # Else, don't decrypt.
         else:
             val = ''.join(list_val)
-            return val
+            return val[4:]
         #
 
     def _import(self, pre, enc, post, pwd, fpath, decrypt=True):
@@ -411,6 +534,7 @@ class Window(QtGui.QMainWindow):
 
         self.centralWidget = QtGui.QWidget(self) # Central Widget.
         self.setCentralWidget(self.centralWidget)
+
         self.statusBar = QtGui.QStatusBar(self)  # Status Bar.
         self.setStatusBar(self.statusBar)
         self.layout = QtGui.QGridLayout(self.centralWidget) # Main Layout.
