@@ -519,6 +519,38 @@ class ScrambledEgg():
             return val
         #
 
+
+STYLE_BUTTON = '''
+QPushButton {color:#2E2633; background-color:#E1EDB9;}
+QPushButton:checked {color:#555152; background-color:#F3EFEE;}
+QPushButton::hover {color:#99173C;}
+'''
+
+STYLE_CHECKBOX = '''
+QCheckBox {color:#2E2633;}
+QCheckBox::hover {color:#99173C;}
+'''
+
+STYLE_LINEEDIT = '''
+QLineEdit {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;}
+QLineEdit:disabled {background-color:#EFEBE7;}
+QLineEdit:focus {border:2px solid #99173C;}
+'''
+
+STYLE_TEXTEDIT = '''
+QTextEdit {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;}
+QTextEdit:disabled {color:#555152; background-color:#EFEBE7;}
+QTextEdit:focus {border:2px solid #99173C;}
+QPlainTextEdit {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;}
+QPlainTextEdit:disabled {color:#555152; background-color:#EFEBE7;}
+QPlainTextEdit:focus {border:2px solid #99173C;}
+'''
+
+STYLE_COMBOBOX = '''
+QComboBox {color:#2E2633;}
+QComboBox QAbstractItemView {selection-background-color:#E1EDB9;}
+'''
+
 class Window(QtGui.QMainWindow):
 
     def __init__(self):
@@ -543,8 +575,8 @@ class Window(QtGui.QMainWindow):
         self.leftText = QtGui.QTextEdit(self.centralWidget)       # To write clean text.
         self.rightText = QtGui.QPlainTextEdit(self.centralWidget) # To view encrypted text.
 
-        self.buttonCryptMode = QtGui.QPushButton('Encrypt Mode', self.centralWidget)
-        self.buttonDecryptMode = QtGui.QPushButton('Decrypt Mode', self.centralWidget)
+        self.buttonCryptMode = QtGui.QPushButton(self.centralWidget)
+        self.buttonDecryptMode = QtGui.QPushButton(self.centralWidget)
 
         self.preProcess = QtGui.QComboBox(self.centralWidget)  # Left side.
         self.comboCrypt = QtGui.QComboBox(self.centralWidget)  # Left side.
@@ -601,31 +633,52 @@ class Window(QtGui.QMainWindow):
         self.buttonCryptMode.setCheckable(True)
         self.buttonCryptMode.setChecked(True)
         self.buttonCryptMode.setToolTip('Switch to Encryption mode')
+        self.buttonCryptMode.setStyleSheet(STYLE_BUTTON)
         self.buttonDecryptMode.setCheckable(True)
         self.buttonDecryptMode.setToolTip('Switch to Decryption mode')
+        self.buttonDecryptMode.setStyleSheet(STYLE_BUTTON)
+        #
+        # Some styles.
+        self.loadFile.setStyleSheet(STYLE_BUTTON)
+        self.saveFile.setStyleSheet(STYLE_BUTTON)
+        self.leftText.setStyleSheet(STYLE_TEXTEDIT)
+        self.rightText.setStyleSheet(STYLE_TEXTEDIT)
         #
         # Password fields.
         self.linePasswordL.setEchoMode(QtGui.QLineEdit.Password)
         self.linePasswordL.setToolTip('Password used for encrypting the text')
         self.linePasswordL.setMaxLength(99)
+        self.linePasswordL.setStyleSheet(STYLE_LINEEDIT)
         self.checkPwdL.setTristate(False)
+        self.checkPwdL.setStyleSheet(STYLE_CHECKBOX)
         self.linePasswordR.setEchoMode(QtGui.QLineEdit.Password)
         self.linePasswordR.setToolTip('Password used for decrypting the text')
         self.linePasswordR.setMaxLength(99)
         self.linePasswordR.setDisabled(True)
+        self.linePasswordR.setStyleSheet(STYLE_LINEEDIT)
         self.checkPwdR.setTristate(False)
+        self.checkPwdR.setStyleSheet(STYLE_CHECKBOX)
         #
         # Formatted text.
         self.setFormatting.setTristate(False)
+        self.setFormatting.setStyleSheet(STYLE_CHECKBOX)
         self.setTags.setTristate(False)
+        self.setTags.setStyleSheet(STYLE_CHECKBOX)
         #
+        # All combo boxes.
         MIN = 120
         self.preProcess.setMinimumWidth(MIN)
+        self.preProcess.setStyleSheet(STYLE_COMBOBOX)
         self.comboCrypt.setMinimumWidth(MIN)
+        self.comboCrypt.setStyleSheet(STYLE_COMBOBOX)
         self.postProcess.setMinimumWidth(MIN)
+        self.postProcess.setStyleSheet(STYLE_COMBOBOX)
         self.preDecrypt.setMinimumWidth(MIN)
+        self.preDecrypt.setStyleSheet(STYLE_COMBOBOX)
         self.comboDecrypt.setMinimumWidth(MIN)
+        self.comboDecrypt.setStyleSheet(STYLE_COMBOBOX)
         self.postDecrypt.setMinimumWidth(MIN)
+        self.postDecrypt.setStyleSheet(STYLE_COMBOBOX)
         #
         # Pre combo-boxes.
         self.preProcess.setToolTip('Select pre-process')
@@ -684,12 +737,15 @@ class Window(QtGui.QMainWindow):
     def onCryptMode(self):
         #
         self.buttonCryptMode.setChecked(True)
+        self.buttonCryptMode.setText('Encrypt Mode is Enabled')
         self.buttonDecryptMode.setChecked(False)
+        self.buttonDecryptMode.setText('Decrypt Mode')
         #
         self.linePasswordL.setDisabled(False)
-        self.leftText.setReadOnly(False)
+        self.leftText.setDisabled(False)
+        #
         self.linePasswordR.setDisabled(True)
-        self.rightText.setReadOnly(True)
+        self.rightText.setDisabled(True)
         #
         self.checkPwdL.setDisabled(False)
         self.checkPwdR.setDisabled(True)
@@ -707,12 +763,15 @@ class Window(QtGui.QMainWindow):
     def onDecryptMode(self):
         #
         self.buttonCryptMode.setChecked(False)
+        self.buttonCryptMode.setText('Encrypt Mode')
         self.buttonDecryptMode.setChecked(True)
+        self.buttonDecryptMode.setText('Decrypt Mode is Enabled')
         #
         self.linePasswordL.setDisabled(True)
-        self.leftText.setReadOnly(True)
+        self.leftText.setDisabled(True)
+        #
         self.linePasswordR.setDisabled(False)
-        self.rightText.setReadOnly(False)
+        self.rightText.setDisabled(False)
         #
         self.checkPwdL.setDisabled(True)
         self.checkPwdR.setDisabled(False)
@@ -764,7 +823,7 @@ class Window(QtGui.QMainWindow):
         #
         # Setup default (no error) status.
         if self.buttonCryptMode.isChecked():
-            self.statusBar.setStyleSheet('color: blue;')
+            self.statusBar.setStyleSheet('color:blue')
             self.statusBar.showMessage('  Encryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post))
         #
         self.postDecrypt.setCurrentIndex(self.preProcess.currentIndex())
@@ -783,7 +842,7 @@ class Window(QtGui.QMainWindow):
             self.nrLettersR.setText('Enc: %i' % len(final))
         else:
             self.rightText.clear()
-            self.statusBar.setStyleSheet('color: red;')
+            self.statusBar.setStyleSheet('color:red')
             self.statusBar.showMessage(self.SE.error)
         #
 
@@ -809,7 +868,7 @@ class Window(QtGui.QMainWindow):
         pwd = self.linePasswordR.text()
         #
         if self.buttonDecryptMode.isChecked():
-            self.statusBar.setStyleSheet('color: blue;')
+            self.statusBar.setStyleSheet('color:blue')
             self.statusBar.showMessage('  Decryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post))
         #
         self.preProcess.setCurrentIndex(self.postDecrypt.currentIndex())
@@ -839,7 +898,7 @@ class Window(QtGui.QMainWindow):
             self.nrLettersR.setText('Enc: %i' % len(txt))
         else:
             self.leftText.clear()
-            self.statusBar.setStyleSheet('color: red;')
+            self.statusBar.setStyleSheet('color:red')
             self.statusBar.showMessage(self.SE.error)
         #
 
@@ -894,6 +953,7 @@ class Window(QtGui.QMainWindow):
             self.rightText.setPlainText(val)
             self.onDecryptMode()
             self.onRightTextChanged()
+            self.rightText.setFocus()
         #
 
 #
