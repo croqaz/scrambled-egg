@@ -54,23 +54,24 @@ for f in files:
                 ti = clock()
                 # Generate random password.
                 pwd = RandPassword()
-                # Encrypting.
+                # Encrypting without adding tags.
                 _enc = s.encrypt(txt, pre, enc, post, pwd, False)
                 # Inserting random tag.
                 tag = ['<#>%s:%s:%s<#>','[#]%s:%s:%s[#]','{#}%s:%s:%s{#}','(#)%s:%s:%s(#)'][random.randrange(0, 4)]
                 tag = tag % (_SCRAMBLE_D[pre], _ENC[enc], _ENCODE_D[post].replace(' Codec',''))
                 #
                 # Put tag randomly at the beggining, or at the end, and
-                # call decrypt without telling HOW to decrypt, the methods will be extracted from tags.
+                # call decrypt without telling Scrambled-Egg HOW to decrypt,
+                # the methods will be extracted from tags.
                 if len(pwd) % 2:
                     _dec = s.decrypt(tag+_enc, None, None, None, pwd)
                 else:
                     _dec = s.decrypt(_enc+tag, None, None, None, pwd)
                 #
                 if not _dec:
-                    print('Decryption returned NULL!')
-                    print(post, enc, pre, pwd, s.error)
-                    # It will raise an error next line.
+                    print('Error on Decryption !')
+                    print(post, enc, pre, 'pwd:', pwd, s.error.strip())
+                    # If Null, an error will be raised, on next line.
                 #
                 # Checking.
                 if len(_dec) != L or MD5.new(_dec).digest() != H:

@@ -534,16 +534,16 @@ QCheckBox::hover {color:#99173C;}
 STYLE_LINEEDIT = '''
 QLineEdit {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;}
 QLineEdit:disabled {background-color:#EFEBE7;}
-QLineEdit:focus {border:2px solid #99173C;}
+QLineEdit:focus {border:1px solid #99173C;}
 '''
 
 STYLE_TEXTEDIT = '''
 QTextEdit {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;}
 QTextEdit:disabled {color:#555152; background-color:#EFEBE7;}
-QTextEdit:focus {border:2px solid #99173C;}
+QTextEdit:focus {border:1px solid #99173C;}
 QPlainTextEdit {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;}
 QPlainTextEdit:disabled {color:#555152; background-color:#EFEBE7;}
-QPlainTextEdit:focus {border:2px solid #99173C;}
+QPlainTextEdit:focus {border:1px solid #99173C;}
 '''
 
 STYLE_COMBOBOX = '''
@@ -560,6 +560,7 @@ class Window(QtGui.QMainWindow):
         super(Window, self).__init__()
         self.resize(800, 400)
         self.setWindowTitle('Scrambled Egg :: Live Crypt')
+        self.setWindowIcon(QtGui.QIcon('icon.ico'))
         QtGui.QApplication.setStyle(QtGui.QStyleFactory.create('CleanLooks'))
         QtGui.QApplication.setPalette(QtGui.QApplication.style().standardPalette())
         self.SE = ScrambledEgg()
