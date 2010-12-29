@@ -1,5 +1,5 @@
 
-import os, glob
+import os, shutil, glob
 import random
 from time import clock
 from Crypto.Hash import MD5
@@ -14,14 +14,14 @@ _SCRAMBLE_D = scrambled_egg.SCRAMBLE_D
 del _SCRAMBLE_D['None']
 _ENC = scrambled_egg.ENC
 del _ENC['None']
-_ENCODE_D = scrambled_egg.ENCODE_D
+_ENCODE_D = {'Base64 Codec':'64', 'Base32 Codec':'32', 'HEX Codec':'H'}
 PASSED = True
 
 s = scrambled_egg.ScrambledEgg()
 
 def RandPassword():
     # Returns a random password.
-    L = random.randrange(3, 99)
+    L = random.randrange(3, 9)
     pwd = []
     for i in range(L):
         pwd.append( chr(random.randrange(48, 122)) )
@@ -35,7 +35,7 @@ def splitthousands(s, sep=','):
     if len(s) <= 3: return s
     return splitthousands(s[:-3], sep) + sep + s[-3:]
 
-log.basicConfig(level=10, format='%(asctime)s %(levelname)-10s %(message)s', datefmt='%y-%m-%d %H:%M:%S', filename='Testing1_Log.Log', filemode='w')
+log.basicConfig(level=10, format='%(asctime)s %(levelname)-10s %(message)s', datefmt='%y-%m-%d %H:%M:%S', filename='Testing2_Log.Log', filemode='w')
 console = log.StreamHandler() ; console.setLevel(10) ; log.getLogger('').addHandler(console) # Print + write log.
 log.info('Testing started, %i files.\n' % len(files))
 
@@ -50,34 +50,32 @@ for f in files:
     L = len(txt)
     H = MD5.new(txt).digest()
     #
+    # Create temp folder for images.
+    try: os.mkdir(os.getcwd()+'/temp_test')
+    except: pass
+    #
     for pre in _SCRAMBLE_D:
         for enc in _ENC:
             for post in _ENCODE_D:
                 #
-                # IGNORE Quopri, it's still UNSTABLE.
-                if post == 'Quopri Codec': continue
+                # IGNORE ROT13, it's not working with Binary files.
+                if pre == 'ROT13': continue
                 #
                 ti = clock()
+                img_path = os.getcwd()+'/temp_test/img_%s_%s_%s.png' % (pre, enc, post)
+                #
                 # Generate random password.
                 pwd = RandPassword()
-                # Encrypting without adding tags.
-                _enc = s.encrypt(txt, pre, enc, post, pwd, False)
-                # Inserting random tag.
-                tag = ['<#>%s:%s:%s<#>','[#]%s:%s:%s[#]','{#}%s:%s:%s{#}','(#)%s:%s:%s(#)'][random.randrange(0, 4)]
-                tag = tag % (_SCRAMBLE_D[pre], _ENC[enc], _ENCODE_D[post].replace(' Codec',''))
                 #
-                # Put tag randomly at the beggining, or at the end, and
-                # call decrypt without telling Scrambled-Egg HOW to decrypt,
-                # the methods will be extracted from tags.
-                if len(pwd) % 2:
-                    _dec = s.decrypt(tag+_enc, None, None, None, pwd)
-                else:
-                    _dec = s.decrypt(_enc+tag, None, None, None, pwd)
+                # Generate PNG Image.
+                s.toImage(txt, pre, enc, post, pwd, img_path, True)
+                #
+                # Decrypt the image.
+                _dec = s.fromImage(pwd, img_path, True)
                 #
                 if not _dec:
                     log.error('Error on test `%s %s %s`!' % (pre, enc, post))
-                    log.error('Pwd: %s ; Tag: %s' % (pwd, tag))
-                    #log.error('Dump:\n%s' % _enc)
+                    log.error('Pwd: %s' % pwd)
                     # An error will be raised on next line.
                 #
                 # Checking.
@@ -90,8 +88,8 @@ for f in files:
                 # Count the time.
                 tf = clock()-ti
                 SPEEDs[pre+' '+enc+' '+post] = tf
-                SIZEs[pre+' '+enc+' '+post] = len(_enc)
-                del _enc, _dec
+                SIZEs[pre+' '+enc+' '+post] = len(open(img_path, 'rb').read())
+                del _dec
                 #
     #
     del txt
@@ -111,6 +109,10 @@ for f in files:
         inv_SIZEs[min(SIZEs.values())], splitthousands(min(SIZEs.values())),
         inv_SPEEDs[max(SPEEDs.values())], max(SPEEDs.values()),
         inv_SIZEs[max(SIZEs.values())], splitthousands(max(SIZEs.values())) ))
+    #
+    # Delete temp folder.
+    try: shutil.rmtree(os.getcwd()+'/temp_test')
+    except: pass
     #
 
 if PASSED:

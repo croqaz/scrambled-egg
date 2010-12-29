@@ -197,18 +197,18 @@ class ScrambledEgg():
 
     def decrypt(self, txt, pre, enc, post, pwd):
         #
-        # Trying to identify and/or delete `meta-tags`.
+        # Trying to identify and/or delete pre/enc/post tags.
         try:
             re_groups = re.search(NO_TAGS, txt).groups()
-            info = re_groups[0] or re_groups[1] or re_groups[2] or re_groups[3]
+            tags = re_groups[0] or re_groups[1] or re_groups[2] or re_groups[3]
             txt = re.sub(NO_TAGS, '', txt)
             # Identify here.
             if not pre:
-                pre = info.split(':')[2]
+                pre = tags.split(':')[2]
             if not enc:
-                enc = info.split(':')[1]
+                enc = tags.split(':')[1]
             if not post:
-                post = info.split(':')[0]
+                post = tags.split(':')[0]
         except:
             pass
         #
@@ -287,53 +287,64 @@ class ScrambledEgg():
 
     def toImage(self, txt, pre, enc, post, pwd, path, encrypt=True):
         '''
-        Any information, text and/or files, can be encoded inside a little PNG image.
-        Depending on how you encode the crypted data, images come in 3 flavors: HEX, Base32 and Base64.
-        Each letter is transformed into a color from 1 to 255. Four colors become one pixel.
-        HEX encoding is `high density`. One pixel is made of 8 letters, instead of 4 letters.
+        Any information, text and/or files, can be encoded inside a little PNG image. \n\
+        Depending on how you encode the crypted data, images come in 3 flavors: HEX, Base32 and Base64. \n\
+        Each letter is transformed into a color from 1 to 255. Four colors become one pixel. \n\
+        HEX encoding is `high density`. Two letters are transformed into a color from 1 to 255,
+        so one pixel is made of 8 letters, instead of 4 letters.
         '''
         #
-        # Input can be string, or file. If is file, read it.
+        # Input can be string, or file. If's file, read it.
         if str(type(txt)) == "<type 'file'>":
             txt.seek(0)
             txt = txt.read()
 
-        # Pre/ Enc/ Post information.
-        if post == 'HEX Codec':
-            first_pixel = '2'
-        else:
-            first_pixel = '1'
-        first_pixel += SCRAMBLE_NR[pre] + ENCRYPT_NR[enc] + ENCODE_NR[post]
-        
-        if encrypt: # If text MUST be encrypted first.
-            val = self.encrypt(txt, pre, enc, post, pwd)[::-1]
+        # All text must be reversed, to pop from the end of the characters list.
+        if encrypt: # If text MUST be encrypted first, encrypt without pre/enc/post tags.
+            val = self.encrypt(txt, pre, enc, post, pwd, False)[::-1]
             if not val:
                 return
         else: # Else, the text is already encrypted.
             val = txt[::-1]
-        # Add Pre/ Enc/ Post information.
-        val += first_pixel
-        del first_pixel
 
         # Calculate the edge of the square and blank square.
         if post == 'HEX Codec':
-            edge = math.ceil(math.sqrt( float(len(val))/8.0 ))
-            blank = math.ceil((edge * edge - float(len(val))/8.0) / 2.0)
+            edge = math.ceil(math.sqrt( float(len(val) + 1)/8.0 ))
+            blank = math.ceil(edge * edge - float(len(val) + 1) / 8.0)
         else:
-            edge = math.ceil(math.sqrt( float(len(val))/4.0 ))
-            blank = math.ceil((edge * edge - float(len(val))/4.0) / 2.0)
+            edge = math.ceil(math.sqrt( float(len(val) + 1)/4.0 ))
+            blank = math.ceil((edge * edge - float(len(val) + 1)/4.0) / 2.0)
+
+        # `Second pixel` : a number representing the length of valid characters.
+        # This is only used for HEX, because when decrypting, the invalid characters will be trimmed.
+        if post == 'HEX Codec':
+            second_pixel = str(QtGui.QColor(int(blank)).name())[3:]
+            val += second_pixel[::-1]
+            #print '! Second pixel', second_pixel
+            del second_pixel
+
+        # `First pixel` : a string with 4 numbers.
+        if post == 'HEX Codec':
+            first_pixel = '0'
+        else:
+            first_pixel = '1'
+        # Pre/ Enc/ Post information at the end of the reversed string.
+        first_pixel += SCRAMBLE_NR[pre] + ENCRYPT_NR[enc] + ENCODE_NR[post]
+        val += first_pixel[::-1]
+        #print '! First pixel', first_pixel
+        del first_pixel
 
         # Explode the encrypted string.
         list_val = list(val)
         # New square image.
-        print('Creating new image, %ix%i, blank is %i, string to encode is %i characters.' % (edge, edge, blank, len(val)))
+        print('Creating new image, %ix%i, blank is %i, string to encode is %i characters.' % (edge, edge, blank, len(val)+2))
         im = QtGui.QImage(edge, edge, QtGui.QImage.Format_ARGB32)
         _pix = im.setPixel
         _rgba = QtGui.qRgba
         _int = int
         _ord = ord
 
-        # HEX is `high density`.
+        # HEX codec.
         if post == 'HEX Codec':
             for i in range(int(edge)):
                 for j in range(int(edge)):
@@ -398,7 +409,7 @@ class ScrambledEgg():
             print('Cannot save PNG file "%s" !' % path)
         #
 
-    def fromImage(self, pre, enc, post, pwd, path, decrypt=True):
+    def fromImage(self, pwd, path, decrypt=True):
         #
         if not os.path.isfile(path):
             print('Cannot find file "%s" !' % path)
@@ -410,45 +421,53 @@ class ScrambledEgg():
         except:
             print('Image "%s" is not a valid RGBA PNG !' % path)
             return
-        #
+
         list_val = []
         _pix = im.pixel
         _r = QtGui.qRed
         _g = QtGui.qGreen
         _b = QtGui.qBlue
         _a = QtGui.qAlpha
-        #
-        first_pixel = 0
-        # Calculate first pixel.
+
+        fp_val = 0
+
+        # Calculate First Pixel.
         for i in range(im.width()):
             for j in range(im.height()):
                 #
-                rgba0 = _pix(j, i)
-                # If it's not a blank pixel.
-                if rgba0 != 4294967295L:
-                    first_pixel = [_r(rgba0), _g(rgba0), _b(rgba0), _a(rgba0)]
+                if fp_val:
                     break
                 #
-            if first_pixel:
-                break
+                pix1 = _pix(j, i)
+                #
+                if pix1 != 4294967295L: # Color #FFFFFF, blank pixel.
+                    fp_val = [_r(pix1), _g(pix1), _b(pix1), _a(pix1)]
+                    break
+                #
+
+        # Calculate color of first pixel.
+        # Red+Green represents pre/enc/post information.
+        # Blue+Alpha value represents nr of valid characters.
+        cc = QtGui.QColor(fp_val[0], fp_val[1], fp_val[2], fp_val[3])
+        first_pixel_hex = cc.name()[1:5]
+        first_pixel_b = [chr(fp_val[0]), chr(fp_val[1]), chr(fp_val[2]), chr(fp_val[3])]
+        #print 'FP HEX:', first_pixel_hex, 'FP BASE:', first_pixel_b
+        blank = int(hex(cc.blue())[2:]+hex(cc.alpha())[2:], 16)
+        del cc, fp_val
 
         # Reverse number dictionaries.
         reverse_s = dict(zip(SCRAMBLE_NR.values(), SCRAMBLE_NR.keys()))
         reverse_ey = dict(zip(ENCRYPT_NR.values(), ENCRYPT_NR.keys()))
         reverse_ed = dict(zip(ENCODE_NR.values(), ENCODE_NR.keys()))
 
-        # If not HD.
-        if first_pixel[3] == 49:
-            pre = reverse_ed[unichr(first_pixel[0])]
-            enc = reverse_ey[unichr(first_pixel[1])]
-            post = reverse_s[unichr(first_pixel[2])]
-
-        # If HD.
-        elif first_pixel[1] == 18 or first_pixel[1] == 34 or first_pixel[1] == 50 or first_pixel[1] == 66:
-            pixel = hex(int(first_pixel[0]))[-2:] + hex(int(first_pixel[1]))[-2:]
-            pre = reverse_ed[pixel[0]]
-            enc = reverse_ey[pixel[1]]
-            post = reverse_s[pixel[2]]
+        if first_pixel_hex[0] == '0' and first_pixel_b[0] != '0':
+            post = reverse_s[first_pixel_hex[1]]
+            enc = reverse_ey[first_pixel_hex[2]]
+            pre = reverse_ed[first_pixel_hex[3]]
+        else:
+            post = reverse_s[first_pixel_b[1]]
+            enc = reverse_ey[first_pixel_b[2]]
+            pre = reverse_ed[first_pixel_b[3]]
 
         # For HEX.
         if pre == 'HEX Codec':
@@ -460,7 +479,7 @@ class ScrambledEgg():
                     # For each channel in this pixel.
                     for v in [_r(rgba), _g(rgba), _b(rgba), _a(rgba)]:
                         if v < 16:
-                            list_val.append('0'+hex(v)[-1:])
+                            list_val.append('0'+hex(v)[-1])
                         else:
                             list_val.append(hex(v)[-2:])
                     #
@@ -480,18 +499,36 @@ class ScrambledEgg():
                             break
                     #
 
+
+        #ff = open('dump.txt', 'wb')
+        #ff.write( '\n'+''.join(list_val)+'\n' )
+        #ff.write( ''.join(list_val)[8:-blank*8+8] )
+        #ff.close() ; del ff
+
+
         # If the text MUST be decrypted.
         if decrypt:
-            val = self.decrypt(''.join(list_val), pre, enc, post, pwd)
-            if not val:
-                print(self.error)
+            if pre == 'HEX Codec':
+                val = self.decrypt(''.join(list_val)[8:-blank*8+8], pre, enc, post, pwd)
             else:
-                return val[4:]
+                val = self.decrypt(''.join(list_val[4:]), pre, enc, post, pwd)
+
+            if not val:
+                print('Error! ' + self.error.strip())
+            else:
+                return val
 
         # Else, don't decrypt.
         else:
-            val = ''.join(list_val)
-            return val[4:]
+            if pre == 'HEX Codec':
+                val = ''.join(list_val).replace('ffffffff', '')
+            else:
+                val = ''.join(list_val)
+
+            if not val:
+                print('Error! ' + self.error.strip())
+            else:
+                return val[4:]
         #
 
     def _import(self, pre, enc, post, pwd, fpath, decrypt=True):
@@ -504,7 +541,7 @@ class ScrambledEgg():
         #
         # For PNG files.
         if ext=='.png':
-            return self.fromImage(pre, enc, post, pwd, fpath, decrypt)
+            return self.fromImage(pwd, fpath, decrypt)
         #
         # For the rest of the files.
         if decrypt:
@@ -855,10 +892,10 @@ class Window(QtGui.QMainWindow):
         txt = self.rightText.toPlainText()
         #
         try:
-            info = re.search(NO_TAGS, txt).group(1)
-            self.postDecrypt.setCurrentIndex( self.postDecrypt.findText(info.split(':')[0], QtCore.Qt.MatchFlag(QtCore.Qt.MatchContains)) )
-            self.comboDecrypt.setCurrentIndex( self.comboDecrypt.findText(info.split(':')[1], QtCore.Qt.MatchFlag(QtCore.Qt.MatchContains)) )
-            self.preDecrypt.setCurrentIndex( self.preDecrypt.findText(info.split(':')[2], QtCore.Qt.MatchFlag(QtCore.Qt.MatchContains)) )
+            tags = re.search(NO_TAGS, txt).group(1)
+            self.postDecrypt.setCurrentIndex( self.postDecrypt.findText(tags.split(':')[0], QtCore.Qt.MatchFlag(QtCore.Qt.MatchContains)) )
+            self.comboDecrypt.setCurrentIndex( self.comboDecrypt.findText(tags.split(':')[1], QtCore.Qt.MatchFlag(QtCore.Qt.MatchContains)) )
+            self.preDecrypt.setCurrentIndex( self.preDecrypt.findText(tags.split(':')[2], QtCore.Qt.MatchFlag(QtCore.Qt.MatchContains)) )
         except:
             pass
         #

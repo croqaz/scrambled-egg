@@ -57,9 +57,10 @@
 ---------------
   What's new:
 ---------------
- * Version 0.3 brings quite some changes :
+ * Version 0.3 brings the following changes :
     - better encryption. All modes use CBC;
-    - images transformed with HEX codec are now 2x smaller than images transformed with Base64;
+    - images resulted from HEX codec are now 2x smaller than images resulted from Base64;
+    - better testing. The program is stable.
 
  * Version 0.2 brings quite some changes :
     - a lot of bug fixes;
