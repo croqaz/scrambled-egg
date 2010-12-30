@@ -9,6 +9,8 @@
  - Licence
  - Requirements
  - How to use
+ - Known Issues and Limitations
+ - What's new
 
 ###############
 
@@ -54,13 +56,24 @@
  * In order to access Scrambled-Egg class, all you have to do is : "import scrambled_egg".
  * Tested on Windows and Ubuntu.
 
+---------------------------------
+  Known Issues and Limitations:
+---------------------------------
+ * Try to evoid ROT13, and/or Quopri for binary files (images, music, Doc/Xls files, executables).
+    The result after decoding might be differend from the original file !
+ * Base32 Codec is VERY slow, so don't use it for large files.
+ * The GUI will freeze for a looong time if you try to encrypt/ decrypt more than
+    200.000-300.000 characters !
+
 ---------------
   What's new:
 ---------------
  * Version 0.3 brings the following changes :
     - better encryption. All modes use CBC;
-    - images resulted from HEX codec are now 2x smaller than images resulted from Base64;
-    - better testing. The program is stable.
+    - images resulted from HEX codec are about 25% smaller than images resulted from Base64/32;
+    - better testing. The program is stable. Tested on hundreds of files
+      (images, music, office documents, executables);
+    - the GUI looks nicer.
 
  * Version 0.2 brings quite some changes :
     - a lot of bug fixes;

@@ -20,8 +20,8 @@ PASSED = True
 s = scrambled_egg.ScrambledEgg()
 
 def RandPassword():
-    # Returns a random password.
-    L = random.randrange(3, 9)
+    # Returns a random password between 3 and 99.
+    L = random.randrange(3, 99)
     pwd = []
     for i in range(L):
         pwd.append( chr(random.randrange(48, 122)) )
@@ -75,7 +75,7 @@ for f in files:
                 #
                 if not _dec:
                     log.error('Error on test `%s %s %s`!' % (pre, enc, post))
-                    log.error('Pwd: %s' % pwd)
+                    log.debug('Pwd: %s' % pwd)
                     # An error will be raised on next line.
                 #
                 # Checking.

@@ -52,6 +52,10 @@ class ScrambledEgg():
 
     def __init__(self):
         self.error = ''
+        self.fillChar = '\x01'
+        self.pre = ''
+        self.enc = ''
+        self.post = ''
 
     def __error(self, step, pre, enc, post, field='R'):
         #
@@ -130,7 +134,7 @@ class ScrambledEgg():
         #
         pwd = self._fix_password(pwd, enc)
         L = len(txt)
-        txt += ' ' * ( (((L/16)+1)*16) - L )
+        txt += self.fillChar * ( (((L/16)+1)*16) - L )
         #
         # Encryption operation.
         if enc == 'AES':
@@ -205,10 +209,13 @@ class ScrambledEgg():
             # Identify here.
             if not pre:
                 pre = tags.split(':')[2]
+                self.pre = pre
             if not enc:
                 enc = tags.split(':')[1]
+                self.enc = enc
             if not post:
                 post = tags.split(':')[0]
+                self.post = post
         except:
             pass
         #
@@ -260,12 +267,12 @@ class ScrambledEgg():
         elif enc == 'DES3' or enc == ENC['DES3']:
             o = DES3.new(pwd, mode=2)
         elif not enc or enc == 'None':
-            txt = txt.rstrip(' ')
+            txt = txt.rstrip(self.fillChar)
         else:
             raise Exception('Invalid decrypt "%s" !' % enc)
         #
         if enc != 'None':
-            try: txt = o.decrypt(txt).rstrip(' ')
+            try: txt = o.decrypt(txt).rstrip(self.fillChar)
             except: self.__error(2, pre, enc, post) ; return
         #
         # Un-scramble operation.
@@ -309,14 +316,16 @@ class ScrambledEgg():
 
         # Calculate the edge of the square and blank square.
         if post == 'HEX Codec':
+            # Length + 1.
             edge = math.ceil(math.sqrt( float(len(val) + 1)/8.0 ))
             blank = math.ceil(edge * edge - float(len(val) + 1) / 8.0)
         else:
-            edge = math.ceil(math.sqrt( float(len(val) + 1)/4.0 ))
-            blank = math.ceil((edge * edge - float(len(val) + 1)/4.0) / 2.0)
+            # Length + 5, just to make sure there are enough blank pixels.
+            edge = math.ceil(math.sqrt( float(len(val) + 5)/4.0 ))
+            blank = math.ceil((edge * edge - float(len(val))/4.0) / 2.0)
 
         # `Second pixel` : a number representing the length of valid characters.
-        # This is only used for HEX, because when decrypting, the invalid characters will be trimmed.
+        # This is only used for HEX, because when decrypting, the invalid characters must be trimmed.
         if post == 'HEX Codec':
             second_pixel = str(QtGui.QColor(int(blank)).name())[3:]
             val += second_pixel[::-1]
@@ -337,7 +346,7 @@ class ScrambledEgg():
         # Explode the encrypted string.
         list_val = list(val)
         # New square image.
-        print('Creating new image, %ix%i, blank is %i, string to encode is %i characters.' % (edge, edge, blank, len(val)+2))
+        print('Creating img, %ix%i, blank : %i, string to encode : %i chars.' % (edge, edge, blank, len(val)))
         im = QtGui.QImage(edge, edge, QtGui.QImage.Format_ARGB32)
         _pix = im.setPixel
         _rgba = QtGui.qRgba
@@ -440,20 +449,19 @@ class ScrambledEgg():
                 #
                 pix1 = _pix(j, i)
                 #
-                if pix1 != 4294967295L: # Color #FFFFFF, blank pixel.
+                if pix1 != 4294967295L: # Color #FFFFFFFF, completely white pixel.
                     fp_val = [_r(pix1), _g(pix1), _b(pix1), _a(pix1)]
                     break
                 #
 
-        # Calculate color of first pixel.
-        # Red+Green represents pre/enc/post information.
+        # Calculate the color of first pixel.
+        # For HEX: Red+Green represents pre/enc/post information;
         # Blue+Alpha value represents nr of valid characters.
+        # For Base64/ Base32, first pixel represents only the pre/enc/post information.
         cc = QtGui.QColor(fp_val[0], fp_val[1], fp_val[2], fp_val[3])
         first_pixel_hex = cc.name()[1:5]
         first_pixel_b = [chr(fp_val[0]), chr(fp_val[1]), chr(fp_val[2]), chr(fp_val[3])]
-        #print 'FP HEX:', first_pixel_hex, 'FP BASE:', first_pixel_b
         blank = int(hex(cc.blue())[2:]+hex(cc.alpha())[2:], 16)
-        del cc, fp_val
 
         # Reverse number dictionaries.
         reverse_s = dict(zip(SCRAMBLE_NR.values(), SCRAMBLE_NR.keys()))
@@ -468,6 +476,11 @@ class ScrambledEgg():
             post = reverse_s[first_pixel_b[1]]
             enc = reverse_ey[first_pixel_b[2]]
             pre = reverse_ed[first_pixel_b[3]]
+
+        # Save pre/enc/post info for GUI.
+        self.pre = pre
+        self.enc = enc
+        self.post = post
 
         # For HEX.
         if pre == 'HEX Codec':
@@ -501,9 +514,10 @@ class ScrambledEgg():
 
 
         #ff = open('dump.txt', 'wb')
-        #ff.write( '\n'+''.join(list_val)+'\n' )
-        #ff.write( ''.join(list_val)[8:-blank*8+8] )
-        #ff.close() ; del ff
+        #ff.write('\nColor: %s ; FP Val: %s ; FP Hex: %s ; FP Base64/32: %s ; Blank: %i\n' % (cc.name(),str(fp_val),first_pixel_hex,''.join(first_pixel_b),blank))
+        #ff.write(''.join(list_val)+'\n')
+        #ff.write(''.join(list_val)[8:-blank*8+8])
+        #ff.close() ; del ff, cc, fp_val
 
 
         # If the text MUST be decrypted.
@@ -521,14 +535,14 @@ class ScrambledEgg():
         # Else, don't decrypt.
         else:
             if pre == 'HEX Codec':
-                val = ''.join(list_val).replace('ffffffff', '')
+                val = ''.join(list_val)[8:-blank*8+8]
             else:
-                val = ''.join(list_val)
+                val = ''.join(list_val[4:]
 
             if not val:
                 print('Error! ' + self.error.strip())
             else:
-                return val[4:]
+                return val
         #
 
     def _import(self, pre, enc, post, pwd, fpath, decrypt=True):
