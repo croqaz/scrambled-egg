@@ -18,7 +18,7 @@
   About:
 ----------
 
- - easily encrypt your data using AES, Blowfish, CAST, or DES3, then encode the result
+ - easily encrypt your data using AES, ARC2, Blowfish, CAST, or DES3, then encode the result
     in a printable form, using Base64, Base32, HEX, Quopri, string escape, UU or XML;
  - the resulted string can be sent on e-mail as text, saved as XML or UU, or can be
     transformed into a little PNG image;
@@ -45,7 +45,7 @@
 -----------------
   Requirements:
 -----------------
- * Python 2.6. Scrambled-Egg is written entirely in Python 2.6. (www.python.org)
+ * Python 2.6/2.7. Scrambled-Egg is written entirely in Python 2.6. (www.python.org)
  * Python Crypto. Data is crypted in AES, Blowfish, DES3, etc. (www.pycrypto.org)
  * PyQt4. Graphical user interface with Qt. (www.riverbankcomputing.co.uk/software/pyqt)
 
@@ -59,7 +59,7 @@
 ---------------------------------
   Known Issues and Limitations:
 ---------------------------------
- * Try to evoid ROT13, and/or Quopri for binary files (images, music, Doc/Xls files, executables).
+ * Don't use Quopri Codec with binary files (images, music, Doc/Xls files, executables).
     The result after decoding might be differend from the original file !
  * Base32 Codec is VERY slow, so don't use it for large files.
  * The GUI will freeze for a looong time if you try to encrypt/ decrypt more than
@@ -70,7 +70,7 @@
 ---------------
  * Version 0.3 brings the following changes :
     - better encryption. All modes use CBC;
-    - images resulted from HEX codec are about 25% smaller than images resulted from Base64/32;
+    - images resulted from HEX codec are about 25-33% smaller than images resulted from Base64/32;
     - better testing. The program is stable. Tested on hundreds of files
       (images, music, office documents, executables);
     - the GUI looks nicer.

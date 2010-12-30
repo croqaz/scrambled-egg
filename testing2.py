@@ -58,9 +58,6 @@ for f in files:
         for enc in _ENC:
             for post in _ENCODE_D:
                 #
-                # IGNORE ROT13, it's not working with Binary files.
-                if pre == 'ROT13': continue
-                #
                 ti = clock()
                 img_path = os.getcwd()+'/temp_test/img_%s_%s_%s.png' % (pre, enc, post)
                 #

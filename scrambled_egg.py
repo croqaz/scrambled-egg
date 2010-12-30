@@ -461,7 +461,10 @@ class ScrambledEgg():
         cc = QtGui.QColor(fp_val[0], fp_val[1], fp_val[2], fp_val[3])
         first_pixel_hex = cc.name()[1:5]
         first_pixel_b = [chr(fp_val[0]), chr(fp_val[1]), chr(fp_val[2]), chr(fp_val[3])]
-        blank = int(hex(cc.blue())[2:]+hex(cc.alpha())[2:], 16)
+        if cc.alpha() < 16:
+            blank = int(hex(cc.blue())[2:]+'0'+hex(cc.alpha())[2:], 16)
+        else:
+            blank = int(hex(cc.blue())[2:]+hex(cc.alpha())[2:], 16)
 
         # Reverse number dictionaries.
         reverse_s = dict(zip(SCRAMBLE_NR.values(), SCRAMBLE_NR.keys()))
@@ -514,8 +517,8 @@ class ScrambledEgg():
 
 
         #ff = open('dump.txt', 'wb')
-        #ff.write('\nColor: %s ; FP Val: %s ; FP Hex: %s ; FP Base64/32: %s ; Blank: %i\n' % (cc.name(),str(fp_val),first_pixel_hex,''.join(first_pixel_b),blank))
-        #ff.write(''.join(list_val)+'\n')
+        #ff.write('\nColor: %s ; FP Val: %s ; FP Hex: %s ; FP B64/32: %s ; Blank: %i' % (cc.name(),str(fp_val),first_pixel_hex,''.join(first_pixel_b),blank))
+        #ff.write('\n'+''.join(list_val)+'\n')
         #ff.write(''.join(list_val)[8:-blank*8+8])
         #ff.close() ; del ff, cc, fp_val
 
@@ -537,7 +540,7 @@ class ScrambledEgg():
             if pre == 'HEX Codec':
                 val = ''.join(list_val)[8:-blank*8+8]
             else:
-                val = ''.join(list_val[4:]
+                val = ''.join(list_val[4:])
 
             if not val:
                 print('Error! ' + self.error.strip())
