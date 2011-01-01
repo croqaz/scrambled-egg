@@ -6,7 +6,7 @@ from Crypto.Hash import MD5
 import logging as log
 import scrambled_egg
 
-path = '/media/Data/Projects/p-scrambled-egg/trunk/some_files'
+path = '/media/Disk/Projekte/p-scrambled-egg/trunk/some_files'
 #path = r'd:\Projects\p-scrambled-egg\trunk\some_files'
 files = glob.glob(path+'/*.*')
 
@@ -20,8 +20,8 @@ PASSED = True
 s = scrambled_egg.ScrambledEgg()
 
 def RandPassword():
-    # Returns a random password between 3 and 99.
-    L = random.randrange(3, 99)
+    # Returns a random password between 1 and 128.
+    L = random.randrange(1, 128)
     pwd = []
     for i in range(L):
         pwd.append( chr(random.randrange(48, 122)) )

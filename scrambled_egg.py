@@ -296,15 +296,18 @@ class ScrambledEgg():
         '''
         Any information, text and/or files, can be encoded inside a little PNG image. \n\
         Depending on how you encode the crypted data, images come in 3 flavors: HEX, Base32 and Base64. \n\
-        Each letter is transformed into a color from 1 to 255. Four colors become one pixel. \n\
+        Each letter is transformed into a color from 1 to 255 ; Four colors become one pixel. \n\
         HEX encoding is `high density`. Two letters are transformed into a color from 1 to 255,
-        so one pixel is made of 8 letters, instead of 4 letters.
+        so one pixel consists of 8 letters, instead of 4 letters.
         '''
         #
         # Input can be string, or file. If's file, read it.
         if str(type(txt)) == "<type 'file'>":
             txt.seek(0)
             txt = txt.read()
+
+        # Strip pre/enc/post tags.
+        txt = re.sub(NO_TAGS, '', txt)
 
         # All text must be reversed, to pop from the end of the characters list.
         if encrypt: # If text MUST be encrypted first, encrypt without pre/enc/post tags.
@@ -361,25 +364,25 @@ class ScrambledEgg():
                 for j in range(int(edge)):
                     #
                     _r = _g = _b = _a = 255
-                    #
+
                     # Red
                     if len(list_val) >= 2:
                         _r = _int(list_val.pop()+list_val.pop(), 16)
                     elif len(list_val) == 1:
                         _r = _int(list_val.pop(), 16)
-                    #
+
                     # Green
                     if len(list_val) >= 2:
                         _g = _int(list_val.pop()+list_val.pop(), 16)
                     elif len(list_val) == 1:
                         _g = _int(list_val.pop(), 16)
-                    #
+
                     # Blue
                     if len(list_val) >= 2:
                         _b = _int(list_val.pop()+list_val.pop(), 16)
                     elif len(list_val) == 1:
                         _b = _int(list_val.pop(), 16)
-                    #
+
                     # Alpha
                     if len(list_val) >= 2:
                         _a = _int(list_val.pop()+list_val.pop(), 16)
@@ -1004,14 +1007,20 @@ class Window(QtGui.QMainWindow):
         if not path:
             return
 
+        # Import the text from file, without decryption.
         val = self.SE._import(pre=None, enc=None, post=None, pwd=None, fpath=path, decrypt=False)
 
-        self.postDecrypt.setCurrentIndex( self.postDecrypt.findText(self.SE.post, QtCore.Qt.MatchFlag(QtCore.Qt.MatchContains)) )
-        self.comboDecrypt.setCurrentIndex( self.comboDecrypt.findText(self.SE.enc, QtCore.Qt.MatchFlag(QtCore.Qt.MatchContains)) )
-        self.preDecrypt.setCurrentIndex( self.preDecrypt.findText(self.SE.pre, QtCore.Qt.MatchFlag(QtCore.Qt.MatchContains)) )
-
-        #
         if val:
+            # For step 1.
+            self.preProcess.setCurrentIndex( self.preProcess.findText(self.SE.post, QtCore.Qt.MatchFlag(QtCore.Qt.MatchFixedString)) )
+            self.postDecrypt.setCurrentIndex( self.postDecrypt.findText(self.SE.post, QtCore.Qt.MatchFlag(QtCore.Qt.MatchFixedString)) )
+            # For step 2.
+            self.comboCrypt.setCurrentIndex( self.comboCrypt.findText(self.SE.enc, QtCore.Qt.MatchFlag(QtCore.Qt.MatchFixedString)) )
+            self.comboDecrypt.setCurrentIndex( self.comboDecrypt.findText(self.SE.enc, QtCore.Qt.MatchFlag(QtCore.Qt.MatchFixedString)) )
+            # For step 3.
+            self.postProcess.setCurrentIndex( self.postProcess.findText(self.SE.pre, QtCore.Qt.MatchFlag(QtCore.Qt.MatchFixedString)) )
+            self.preDecrypt.setCurrentIndex( self.preDecrypt.findText(self.SE.pre, QtCore.Qt.MatchFlag(QtCore.Qt.MatchFixedString)) )
+
             self.rightText.setPlainText(val)
             self.onDecryptMode()
             self.onRightTextChanged()
