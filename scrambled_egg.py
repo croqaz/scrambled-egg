@@ -316,9 +316,11 @@ class ScrambledEgg():
 
         # Calculate the edge of the square and blank square.
         if post == 'HEX Codec':
-            # Length + 1.
+            # Length.
             edge = math.ceil(math.sqrt( float(len(val) + 1)/8.0 ))
-            blank = math.ceil(edge * edge - float(len(val) + 1) / 8.0)
+            blank = math.ceil(edge * edge - float(len(val)) / 8.0)
+            if blank:
+                blank -= 1
         else:
             # Length + 5, just to make sure there are enough blank pixels.
             edge = math.ceil(math.sqrt( float(len(val) + 5)/4.0 ))
@@ -515,35 +517,41 @@ class ScrambledEgg():
                             break
                     #
 
+        # Fix `blank` value.
+        if blank:
+            blank = - blank * 8
+        else:
+            blank = len(list_val) * 8
+
 
         #ff = open('dump.txt', 'wb')
         #ff.write('\nColor: %s ; FP Val: %s ; FP Hex: %s ; FP B64/32: %s ; Blank: %i' % (cc.name(),str(fp_val),first_pixel_hex,''.join(first_pixel_b),blank))
         #ff.write('\n'+''.join(list_val)+'\n')
-        #ff.write(''.join(list_val)[8:-blank*8+8])
+        #ff.write(''.join(list_val)[8:blank])
         #ff.close() ; del ff, cc, fp_val
 
 
         # If the text MUST be decrypted.
         if decrypt:
             if pre == 'HEX Codec':
-                val = self.decrypt(''.join(list_val)[8:-blank*8+8], pre, enc, post, pwd)
+                val = self.decrypt(''.join(list_val)[8:blank], pre, enc, post, pwd)
             else:
                 val = self.decrypt(''.join(list_val[4:]), pre, enc, post, pwd)
 
             if not val:
-                print('Error! ' + self.error.strip())
+                print('Error from image (decrypt)! ' + self.error.strip())
             else:
                 return val
 
         # Else, don't decrypt.
         else:
             if pre == 'HEX Codec':
-                val = ''.join(list_val)[8:-blank*8+8]
+                val = ''.join(list_val)[8:blank]
             else:
                 val = ''.join(list_val[4:])
 
             if not val:
-                print('Error! ' + self.error.strip())
+                print('Error from image (notdecrypt)!')
             else:
                 return val
         #
@@ -764,12 +772,16 @@ class Window(QtGui.QMainWindow):
         #
         self.linePasswordL.textChanged.connect(self.onLeftTextChanged)
         self.leftText.textChanged.connect(self.onLeftTextChanged)
-        self.checkPwdL.stateChanged.connect(self.onCryptMode)
+        self.checkPwdL.stateChanged.connect(lambda x: \
+            self.linePasswordL.setEchoMode(QtGui.QLineEdit.Normal) if self.checkPwdL.isChecked() \
+            else self.linePasswordL.setEchoMode(QtGui.QLineEdit.Password))
         self.buttonCryptMode.clicked.connect(self.onCryptMode)
         #
         self.linePasswordR.textChanged.connect(self.onRightTextChanged)
         self.rightText.textChanged.connect(self.onRightTextChanged)
-        self.checkPwdR.stateChanged.connect(self.onDecryptMode)
+        self.checkPwdR.stateChanged.connect(lambda x: \
+            self.linePasswordR.setEchoMode(QtGui.QLineEdit.Normal) if self.checkPwdR.isChecked() \
+            else self.linePasswordR.setEchoMode(QtGui.QLineEdit.Password))
         self.buttonDecryptMode.clicked.connect(self.onDecryptMode)
         #
         self.preProcess.currentIndexChanged.connect(self.onLeftTextChanged)
@@ -805,11 +817,6 @@ class Window(QtGui.QMainWindow):
         self.checkPwdL.setDisabled(False)
         self.checkPwdR.setDisabled(True)
         #
-        if self.checkPwdL.isChecked():
-            self.linePasswordL.setEchoMode(QtGui.QLineEdit.Normal)
-        else:
-            self.linePasswordL.setEchoMode(QtGui.QLineEdit.Password)
-        #
         self.preProcess.setCurrentIndex(self.postDecrypt.currentIndex())
         self.comboCrypt.setCurrentIndex(self.comboDecrypt.currentIndex())
         self.postProcess.setCurrentIndex(self.preDecrypt.currentIndex())
@@ -830,11 +837,6 @@ class Window(QtGui.QMainWindow):
         #
         self.checkPwdL.setDisabled(True)
         self.checkPwdR.setDisabled(False)
-        #
-        if self.checkPwdR.isChecked():
-            self.linePasswordR.setEchoMode(QtGui.QLineEdit.Normal)
-        else:
-            self.linePasswordR.setEchoMode(QtGui.QLineEdit.Password)
         #
         self.postDecrypt.setCurrentIndex(self.preProcess.currentIndex())
         self.comboDecrypt.setCurrentIndex(self.comboCrypt.currentIndex())
@@ -1001,8 +1003,13 @@ class Window(QtGui.QMainWindow):
         path = f.getOpenFileName(self, 'Load crypted text', os.getcwd(), 'All files (*.*)')
         if not path:
             return
-        #
+
         val = self.SE._import(pre=None, enc=None, post=None, pwd=None, fpath=path, decrypt=False)
+
+        self.postDecrypt.setCurrentIndex( self.postDecrypt.findText(self.SE.post, QtCore.Qt.MatchFlag(QtCore.Qt.MatchContains)) )
+        self.comboDecrypt.setCurrentIndex( self.comboDecrypt.findText(self.SE.enc, QtCore.Qt.MatchFlag(QtCore.Qt.MatchContains)) )
+        self.preDecrypt.setCurrentIndex( self.preDecrypt.findText(self.SE.pre, QtCore.Qt.MatchFlag(QtCore.Qt.MatchContains)) )
+
         #
         if val:
             self.rightText.setPlainText(val)
