@@ -86,7 +86,7 @@ class ScrambledEgg():
         '''
         #
         L = len(pwd)
-        #
+
         if enc == 'AES' or enc == ENC['AES']:
             # MAXIMUM 32 characters for AES !
             if L == 32:
@@ -95,6 +95,7 @@ class ScrambledEgg():
                 pwd = hashlib.sha256(pwd).digest()
             else:
                 pwd += 'X' * ( (((L/16)+1)*16) - L )
+
         if enc == 'CAST' or enc == ENC['CAST']:
             # MAXIMUM 8 characters for CAST !
             if L == 8:
@@ -103,6 +104,7 @@ class ScrambledEgg():
                 pwd = hashlib.md5(pwd).digest()
             else:
                 pwd += 'X' * ( (((L/8)+1)*8) - L )
+
         if enc == 'Blowfish' or enc == ENC['Blowfish']:
             # MAXIMUM 56 characters for Blowfish !
             if L == 56:
@@ -111,6 +113,7 @@ class ScrambledEgg():
                 pwd = hashlib.sha224(pwd).hexdigest()
             else:
                 pwd += 'X' * ( (((L/8)+1)*8) - L )
+
         if enc == 'DES3' or enc == ENC['DES3']:
             # MAXIMUM 24 characters for DES3 !
             if L == 24:
@@ -119,10 +122,11 @@ class ScrambledEgg():
                 pwd = 'XX' + hashlib.sha1(pwd).digest() + 'XX'
             else:
                 pwd += 'X' * ( (((L/24)+1)*24) - L )
+
         elif not pwd:
             # Only for NULL passwords.
             pwd = 'X'
-        #
+
         return pwd
         #
 
@@ -413,7 +417,7 @@ class ScrambledEgg():
                         continue
                     #
                     _r = _g = _b = _a = 255
-                    #
+
                     if len(list_val) >= 1:
                         _r = _ord(list_val.pop())
                     if len(list_val) >= 1:
@@ -422,7 +426,7 @@ class ScrambledEgg():
                         _b = _ord(list_val.pop())
                     if len(list_val) >= 1:
                         _a = _ord(list_val.pop())
-                    #
+
                     _pix(j, i, _rgba(_r, _g, _b, _a))
                     #
 
@@ -542,7 +546,6 @@ class ScrambledEgg():
         #ff.write('\n'+''.join(list_val)+'\n')
         #ff.write(''.join(list_val)[8:blank])
         #ff.close() ; del ff, cc, fp_val
-
 
         # If the text MUST be decrypted.
         if decrypt:
@@ -715,13 +718,13 @@ class Window(QtGui.QMainWindow):
         self.buttonDecryptMode.setCheckable(True)
         self.buttonDecryptMode.setToolTip('Switch to Decryption mode')
         self.buttonDecryptMode.setStyleSheet(STYLE_BUTTON)
-        #
+
         # Some styles.
         self.loadFile.setStyleSheet(STYLE_BUTTON)
         self.saveFile.setStyleSheet(STYLE_BUTTON)
         self.leftText.setStyleSheet(STYLE_TEXTEDIT)
         self.rightText.setStyleSheet(STYLE_TEXTEDIT)
-        #
+
         # Password fields.
         self.linePasswordL.setEchoMode(QtGui.QLineEdit.Password)
         self.linePasswordL.setToolTip('Password used for encrypting the text')
@@ -736,7 +739,7 @@ class Window(QtGui.QMainWindow):
         self.linePasswordR.setStyleSheet(STYLE_LINEEDIT)
         self.checkPwdR.setTristate(False)
         self.checkPwdR.setStyleSheet(STYLE_CHECKBOX)
-        #
+
         # Formatted text.
         self.setFormatting.setTristate(False)
         self.setFormatting.setToolTip('Encrypt this text as HTML')
@@ -747,7 +750,7 @@ class Window(QtGui.QMainWindow):
         self.showHTML.setTristate(False)
         self.showHTML.setToolTip('Toogle view HTML source behind the formatted text')
         self.showHTML.setStyleSheet(STYLE_CHECKBOX)
-        #
+
         # All combo boxes.
         MIN = 120
         self.preProcess.setMinimumWidth(MIN)
@@ -890,7 +893,8 @@ class Window(QtGui.QMainWindow):
             self.leftText.setFontFamily("Verdana")
             self.leftText.setFontItalic(False)
             self.leftText.setFontUnderline(False)
-            self.leftText.setFontWeight(14)
+            self.leftText.setFontWeight(10)
+            self.leftText.setFontPointSize(10)
             self.leftText.setTextColor(QtGui.QColor())
             self.leftText.setPlainText(self.cleanupHtml(txt))
         else:

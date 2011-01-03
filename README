@@ -45,7 +45,7 @@
 -----------------
   Requirements:
 -----------------
- * Python 2.6/2.7. Scrambled-Egg is written entirely in Python 2.6. (www.python.org)
+ * Python 2.6/2.7. Scrambled-Egg is written in Python 2.6. (www.python.org)
  * Python Crypto. Data is crypted in AES, Blowfish, DES3, etc. (www.pycrypto.org)
  * PyQt4. Graphical user interface with Qt. (www.riverbankcomputing.co.uk/software/pyqt)
 
@@ -71,6 +71,7 @@
  * Version 0.3 brings the following changes :
     - better encryption. All modes use CBC;
     - images resulted from HEX codec are about 25-33% smaller than images resulted from Base64/32;
+    - checkbox to show HTML;
     - better testing. The program is stable. Tested on hundreds of files
       (images, music, office documents, executables);
     - the GUI looks nicer.
