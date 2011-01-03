@@ -52,7 +52,7 @@ class ScrambledEgg():
 
     def __init__(self):
         self.error = ''
-        self.fillChar = '\x01'
+        self.fillChar = '\x01' # This is probably the best filling character.
         self.pre = ''
         self.enc = ''
         self.post = ''
@@ -76,6 +76,14 @@ class ScrambledEgg():
         #
 
     def _fix_password(self, pwd, enc):
+        '''
+        Adapt the password for each encryption. \n\
+        AES accepts maxim 32 characters. \n\
+        ARC2 accepts maxim 128 characters. \n\
+        CAST accepts maxim 8 characters. \n\
+        Blowfish accepts maxim 56 characters. \n\
+        DES3 accepts maxim 24 characters.
+        '''
         #
         L = len(pwd)
         #
@@ -296,7 +304,7 @@ class ScrambledEgg():
         '''
         Any information, text and/or files, can be encoded inside a little PNG image. \n\
         Depending on how you encode the crypted data, images come in 3 flavors: HEX, Base32 and Base64. \n\
-        Each letter is transformed into a color from 1 to 255 ; Four colors become one pixel. \n\
+        Normally each letter can be transformed into a color from 1 to 255 ; so 4 colors become one pixel. \n\
         HEX encoding is `high density`. Two letters are transformed into a color from 1 to 255,
         so one pixel consists of 8 letters, instead of 4 letters.
         '''
@@ -330,19 +338,21 @@ class ScrambledEgg():
             blank = math.ceil((edge * edge - float(len(val))/4.0) / 2.0)
 
         # `Second pixel` : a number representing the length of valid characters.
-        # This is only used for HEX, because when decrypting, the invalid characters must be trimmed.
+        # This is only used for HEX, because when decrypting, this number of letters is trimmed from the end of the string.
         if post == 'HEX Codec':
             second_pixel = str(QtGui.QColor(int(blank)).name())[3:]
             val += second_pixel[::-1]
             #print '! Second pixel', second_pixel
             del second_pixel
 
-        # `First pixel` : a string with 4 numbers.
+        # `First pixel` : a string with 4 numbers representing Pre/ Enc/ Post information.
+        # For Base64/ Base32, this variabile is encoded in one pixel (4 characters).
+        # For HEX, First Pixel + Second Pixel are both encoded in one pixel (8 characters).
         if post == 'HEX Codec':
             first_pixel = '0'
         else:
             first_pixel = '1'
-        # Pre/ Enc/ Post information at the end of the reversed string.
+        # Add first pixel at the end of the reversed string.
         first_pixel += SCRAMBLE_NR[pre] + ENCRYPT_NR[enc] + ENCODE_NR[post]
         val += first_pixel[::-1]
         #print '! First pixel', first_pixel
@@ -350,7 +360,7 @@ class ScrambledEgg():
 
         # Explode the encrypted string.
         list_val = list(val)
-        # New square image.
+        # Creating new square image.
         print('Creating img, %ix%i, blank : %i, string to encode : %i chars.' % (edge, edge, blank, len(val)))
         im = QtGui.QImage(edge, edge, QtGui.QImage.Format_ARGB32)
         _pix = im.setPixel
@@ -459,10 +469,9 @@ class ScrambledEgg():
                     break
                 #
 
-        # Calculate the color of first pixel.
-        # For HEX: Red+Green represents pre/enc/post information;
-        # Blue+Alpha value represents nr of valid characters.
-        # For Base64/ Base32, first pixel represents only the pre/enc/post information.
+        # Calculate the colors of first pixel.
+        # For HEX: Red+Green represents pre/enc/post information and Blue+Alpha value represents nr of valid characters.
+        # For Base64/ Base32, first pixel represents only the Pre/ Enc/ Post information.
         cc = QtGui.QColor(fp_val[0], fp_val[1], fp_val[2], fp_val[3])
         first_pixel_hex = cc.name()[1:5]
         first_pixel_b = [chr(fp_val[0]), chr(fp_val[1]), chr(fp_val[2]), chr(fp_val[3])]
@@ -485,7 +494,7 @@ class ScrambledEgg():
             enc = reverse_ey[first_pixel_b[2]]
             pre = reverse_ed[first_pixel_b[3]]
 
-        # Save pre/enc/post info for GUI.
+        # Save Pre/ Enc/ Post information for GUI.
         self.pre = pre
         self.enc = enc
         self.post = post
@@ -527,6 +536,7 @@ class ScrambledEgg():
             blank = len(list_val) * 8
 
 
+        # Used for DEBUG.
         #ff = open('dump.txt', 'wb')
         #ff.write('\nColor: %s ; FP Val: %s ; FP Hex: %s ; FP B64/32: %s ; Blank: %i' % (cc.name(),str(fp_val),first_pixel_hex,''.join(first_pixel_b),blank))
         #ff.write('\n'+''.join(list_val)+'\n')
@@ -554,7 +564,7 @@ class ScrambledEgg():
                 val = ''.join(list_val[4:])
 
             if not val:
-                print('Error from image (notdecrypt)!')
+                print('Error from image (no decrypt)!')
             else:
                 return val
         #
@@ -651,6 +661,7 @@ class Window(QtGui.QMainWindow):
         self.checkPwdL = QtGui.QCheckBox('<- Pwd', self.centralWidget) # Left side.
         self.nrLettersL = QtGui.QLabel('', self.centralWidget) # Left side.
         self.setFormatting = QtGui.QCheckBox('Formatted text', self.centralWidget) # Left side.
+        self.showHTML = QtGui.QCheckBox('Show HTML', self.centralWidget) # Left side.
         self.setTags = QtGui.QCheckBox('No tags', self.centralWidget) # Left side.
 
         self.preDecrypt = QtGui.QComboBox(self.centralWidget)    # Right side.
@@ -672,7 +683,8 @@ class Window(QtGui.QMainWindow):
         self.layout.addWidget(self.comboDecrypt, 2, 7, 1, 1)
         self.layout.addWidget(self.postDecrypt, 2, 8, 1, 1)
         self.layout.addWidget(self.setFormatting, 21, 1, 1, 1)
-        self.layout.addWidget(self.setTags, 21, 2, 1, 1)
+        self.layout.addWidget(self.showHTML, 21, 2, 1, 1)
+        self.layout.addWidget(self.setTags, 21, 3, 1, 1)
 
         self.layout.addWidget(self.loadFile, 21, 6, 1, 1)
         self.layout.addWidget(self.saveFile, 21, 7, 1, 1)
@@ -727,9 +739,14 @@ class Window(QtGui.QMainWindow):
         #
         # Formatted text.
         self.setFormatting.setTristate(False)
+        self.setFormatting.setToolTip('Encrypt this text as HTML')
         self.setFormatting.setStyleSheet(STYLE_CHECKBOX)
         self.setTags.setTristate(False)
+        self.setTags.setToolTip('Strip pre/enc/post tags')
         self.setTags.setStyleSheet(STYLE_CHECKBOX)
+        self.showHTML.setTristate(False)
+        self.showHTML.setToolTip('Toogle view HTML source behind the formatted text')
+        self.showHTML.setStyleSheet(STYLE_CHECKBOX)
         #
         # All combo boxes.
         MIN = 120
@@ -745,21 +762,21 @@ class Window(QtGui.QMainWindow):
         self.comboDecrypt.setStyleSheet(STYLE_COMBOBOX)
         self.postDecrypt.setMinimumWidth(MIN)
         self.postDecrypt.setStyleSheet(STYLE_COMBOBOX)
-        #
+
         # Pre combo-boxes.
         self.preProcess.setToolTip('Select pre-process')
         self.postDecrypt.setToolTip('Select post-decrypt')
         for scramble in SCRAMBLE:
             self.preProcess.addItem(scramble, scramble)
             self.postDecrypt.addItem(scramble, scramble)
-        #
+
         # Encryption/ decryption combo-boxes.
         self.comboCrypt.setToolTip('Select encryption algorithm; it will use the provided password')
         self.comboDecrypt.setToolTip('Select encryption algorithm; it will use the provided password')
         for enc in sorted(ENC.keys()):
             self.comboCrypt.addItem(enc, enc)
             self.comboDecrypt.addItem(enc, enc)
-        #
+
         # Post combo-boxes.
         self.postProcess.setToolTip('Select post-process')
         self.preDecrypt.setToolTip('Select pre-decrypt')
@@ -799,6 +816,7 @@ class Window(QtGui.QMainWindow):
         self.loadFile.clicked.connect(self.onLoad)
         self.setFormatting.toggled.connect(self.onLeftTextChanged)
         self.setTags.toggled.connect(self.onLeftTextChanged)
+        self.showHTML.toggled.connect(self.toggleHtml)
         #
         # ACTION !
         self.onCryptMode()
@@ -846,6 +864,41 @@ class Window(QtGui.QMainWindow):
         self.preDecrypt.setCurrentIndex(self.postProcess.currentIndex())
         #
 
+    def cleanupHtml(self, txt):
+        #
+        txt = re.sub('''<span style="[0-9a-zA-Z "':;,-]+">([<>br/ ])</span>''', '', ' '.join(txt.split())) # Empty span.
+        txt = re.sub('''<p style="[0-9a-zA-Z "':;,-]+">[ ]?</p>''', '', txt) # Kill empty paragraphs.
+        txt = txt.replace('</td> <td>', '</td><td>')
+        txt = txt.replace('</tr> <tr>', '</tr><tr>')
+        txt = txt.replace('</span> </p>', '</span></p>')
+        txt = txt.replace('</p> <p ', '</p>\n<p ')
+        txt = txt.replace(' margin-top:0px;', '')
+        txt = txt.replace(' margin-bottom:0px;', '')
+        txt = txt.replace(' margin-left:0px;', '')
+        txt = txt.replace(' margin-right:0px;', '')
+        txt = txt.replace(' -qt-block-indent:0;', '')
+        txt = txt.replace(' text-indent:0px;', '')
+        txt = txt.replace(' style=""', '')
+        return txt.strip()
+        #
+
+    def toggleHtml(self):
+        #
+        if self.showHTML.isChecked():
+            txt = self.leftText.toHtml()
+            self.leftText.clear()
+            self.leftText.setFontFamily("Verdana")
+            self.leftText.setFontItalic(False)
+            self.leftText.setFontUnderline(False)
+            self.leftText.setFontWeight(14)
+            self.leftText.setTextColor(QtGui.QColor())
+            self.leftText.setPlainText(self.cleanupHtml(txt))
+        else:
+            txt = self.leftText.toPlainText()
+            self.leftText.clear()
+            self.leftText.setHtml(self.cleanupHtml(txt))
+        #
+
     def onLeftTextChanged(self):
         #
         if not self.buttonCryptMode.isChecked():
@@ -861,22 +914,12 @@ class Window(QtGui.QMainWindow):
         pwd = self.linePasswordL.text()
         tags = not self.setTags.isChecked()
         #
-        if self.setFormatting.isChecked():
+        if self.setFormatting.isChecked() and not self.showHTML.isChecked():
             # HTML string.
             try: txt = self.leftText.toHtml().encode('utf_8')
             except: txt = self.leftText.toHtml()
             # Cleanup HTML string.
-            txt = re.sub('^.*<body.+?>', '', ' '.join(txt.split()))
-            txt = txt.replace('</body>', '')
-            txt = txt.replace('</html>', '')
-            txt = txt.replace(' margin-top:0px;', '')
-            txt = txt.replace(' margin-bottom:0px;', '')
-            txt = txt.replace(' margin-left:0px;', '')
-            txt = txt.replace(' margin-right:0px;', '')
-            txt = txt.replace(' -qt-block-indent:0;', '')
-            txt = txt.replace(' text-indent:0px;', '')
-            txt = txt.replace(' style=""', '')
-            txt = txt.strip()
+            txt = self.cleanupHtml(txt)
         else:
             try: txt = self.leftText.toPlainText().encode('utf_8')
             except: txt = self.leftText.toPlainText()
@@ -940,17 +983,7 @@ class Window(QtGui.QMainWindow):
         #
         if final:
             # Cleanup HTML string.
-            final = re.sub('^.*<body.+?>', '', ' '.join(final.split()))
-            final = final.replace('</body>', '')
-            final = final.replace('</html>', '')
-            final = final.replace(' margin-top:0px;', '')
-            final = final.replace(' margin-bottom:0px;', '')
-            final = final.replace(' margin-left:0px;', '')
-            final = final.replace(' margin-right:0px;', '')
-            final = final.replace(' -qt-block-indent:0;', '')
-            final = final.replace(' text-indent:0px;', '')
-            final = final.replace(' style=""', '')
-            final = final.strip()
+            final = self.cleanupHtml(final)
             # Setup string as HTML.
             try: self.leftText.setHtml(final.decode('utf_8'))
             except: self.leftText.setHtml(final)
@@ -1037,4 +1070,3 @@ if __name__ == '__main__':
     sys.exit(app.exec_())
 
 # Eof()
-
