@@ -126,7 +126,7 @@ class ScrambledEgg():
                 pwd += 'X' * ( (((L/24)+1)*24) - L )
 
         elif enc == 'RSA' or enc == ENC['RSA']:
-            # No need to fix passwords for RSA !
+            # Read the public/ private key from file.
             pwd = open(pwd, 'rb').read()
 
         elif not pwd:
@@ -304,7 +304,13 @@ class ScrambledEgg():
         else:
             raise Exception('Invalid decrypt "%s" !' % enc)
         #
-        if enc != 'None':
+        if enc == 'RSA' or enc == ENC['RSA']:
+            # RSA is really slooooow.
+            try:
+                to_decrypt = tuple(txt.splitlines())
+                txt = o.decrypt(to_decrypt)
+            except: self.__error(2, pre, enc, post) ; return
+        elif enc != 'None':
             try: txt = o.decrypt(txt).rstrip(self.fillChar)
             except: self.__error(2, pre, enc, post) ; return
         #
@@ -377,6 +383,7 @@ class ScrambledEgg():
             first_pixel = '0'
         else:
             first_pixel = '1'
+
         # Add first pixel at the end of the reversed string.
         first_pixel += SCRAMBLE_NR[pre] + ENCRYPT_NR[enc] + ENCODE_NR[post]
         val += first_pixel[::-1]
@@ -559,7 +566,6 @@ class ScrambledEgg():
             blank = - blank * 8
         else:
             blank = len(list_val) * 8
-
 
         # Used for DEBUG.
         #ff = open('dump.txt', 'wb')
