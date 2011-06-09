@@ -3,7 +3,7 @@
 # ---
 # An application by Cristi Constantin,
 # E-mail : cristi.constantin@live.com,
-# Blog : http://cristi-constantin.blogspot.com.
+# Blog : http://cristi-constantin.com.
 # ---
 
 import os, sys
@@ -13,12 +13,14 @@ import base64
 import binascii as ba
 import hashlib
 import bz2, zlib
+from collections import OrderedDict
 
 from Crypto.Cipher import AES
 from Crypto.Cipher import ARC2
 from Crypto.Cipher import CAST
 from Crypto.Cipher import Blowfish
 from Crypto.Cipher import DES3
+from Crypto.PublicKey import RSA
 
 import sip
 sip.setapi('QString', 2)
@@ -33,7 +35,7 @@ ROT = string.maketrans('nopqrstuvwxyzabcdefghijklmNOPQRSTUVWXYZABCDEFGHIJKLM', '
 #
 SCRAMBLE = ['None', 'ROT13', 'ZLIB', 'BZ2']
 SCRAMBLE_D = {'None':'N', 'ROT13':'R', 'ZLIB':'ZL', 'BZ2':'BZ'}
-ENC = {'AES':'AE', 'ARC2':'AR', 'CAST':'CA', 'Blowfish':'B', 'DES3':'D', 'None':'N'}
+ENC = OrderedDict([('AES', 'AE'), ('Blowfish', 'B'), ('ARC2', 'AR'), ('CAST', 'CA'), ('DES3', 'D'), ('RSA', 'RS'), ('None', 'N')])
 ENCODE = ['Base64 Codec', 'Base32 Codec', 'HEX Codec', 'Quopri Codec', 'String Escape', 'UU Codec', 'XML']
 ENCODE_D = {'Base64 Codec':'64', 'Base32 Codec':'32', 'HEX Codec':'H', 'Quopri Codec':'Q', 'String Escape':'STR', 'UU Codec':'UU', 'XML':'XML'}
 NO_TAGS = re.compile(
@@ -41,7 +43,7 @@ NO_TAGS = re.compile(
     '\[#\](?P<tq>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})\[#\]|' \
     '\{#\}(?P<ta>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})\{#\}|' \
     '\(#\)(?P<tp>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})\(#\)')
-# These numbers are used when creating PNG images.
+# These numbers are used when (re)creating PNG images.
 SCRAMBLE_NR = {'None':'1', 'ROT13':'2', 'ZLIB':'3', 'BZ2':'4'}
 ENCRYPT_NR = {'AES':'1', 'ARC2':'2', 'CAST':'3', 'Blowfish':'5', 'DES3':'4', 'None':'9'}
 ENCODE_NR = {'Base64 Codec':'4', 'Base32 Codec':'2', 'HEX Codec':'1', 'Quopri Codec':'9', 'String Escape':'6', 'UU Codec':'8', 'XML':'7'}
@@ -51,9 +53,9 @@ ENCODE_NR = {'Base64 Codec':'4', 'Base32 Codec':'2', 'HEX Codec':'1', 'Quopri Co
 class ScrambledEgg():
 
     def __init__(self):
-        self.error = ''
+        self.error = '' # Error string.
         self.fillChar = '\x01' # This is probably the best filling character.
-        self.pre = ''
+        self.pre = ''   # Current operations, in order.
         self.enc = ''
         self.post = ''
 
@@ -96,7 +98,7 @@ class ScrambledEgg():
             else:
                 pwd += 'X' * ( (((L/16)+1)*16) - L )
 
-        if enc == 'CAST' or enc == ENC['CAST']:
+        elif enc == 'CAST' or enc == ENC['CAST']:
             # MAXIMUM 8 characters for CAST !
             if L == 8:
                 pass
@@ -105,7 +107,7 @@ class ScrambledEgg():
             else:
                 pwd += 'X' * ( (((L/8)+1)*8) - L )
 
-        if enc == 'Blowfish' or enc == ENC['Blowfish']:
+        elif enc == 'Blowfish' or enc == ENC['Blowfish']:
             # MAXIMUM 56 characters for Blowfish !
             if L == 56:
                 pass
@@ -114,7 +116,7 @@ class ScrambledEgg():
             else:
                 pwd += 'X' * ( (((L/8)+1)*8) - L )
 
-        if enc == 'DES3' or enc == ENC['DES3']:
+        elif enc == 'DES3' or enc == ENC['DES3']:
             # MAXIMUM 24 characters for DES3 !
             if L == 24:
                 pass
@@ -122,6 +124,10 @@ class ScrambledEgg():
                 pwd = 'XX' + hashlib.sha1(pwd).digest() + 'XX'
             else:
                 pwd += 'X' * ( (((L/24)+1)*24) - L )
+
+        elif enc == 'RSA' or enc == ENC['RSA']:
+            # No need to fix passwords for RSA !
+            pwd = open(pwd, 'rb').read()
 
         elif not pwd:
             # Only for NULL passwords.
@@ -144,6 +150,11 @@ class ScrambledEgg():
         else:
             raise Exception('Invalid scramble "%s" !' % pre)
         #
+        # Check RSA key path.
+        if enc == 'RSA' and not os.path.exists(pwd):
+            self.__error(2, pre, enc, post, field='L')
+            return
+        #
         pwd = self._fix_password(pwd, enc)
         L = len(txt)
         txt += self.fillChar * ( (((L/16)+1)*16) - L )
@@ -164,6 +175,9 @@ class ScrambledEgg():
         elif enc == 'DES3':
             o = DES3.new(pwd, mode=2)
             encrypted = o.encrypt(txt)
+        elif enc == 'RSA':
+            o = RSA.importKey(pwd)
+            encrypted = '\n'.join(o.encrypt(txt, 0))
         elif enc == 'None':
             encrypted = txt
         else:
@@ -231,6 +245,11 @@ class ScrambledEgg():
         except:
             pass
         #
+        # Check RSA key path.
+        if enc == 'RSA' and not os.path.exists(pwd):
+            self.__error(2, pre, enc, post)
+            return
+        #
         # Adapting password for encryption.
         pwd = self._fix_password(pwd, enc)
         #
@@ -278,6 +297,8 @@ class ScrambledEgg():
             o = Blowfish.new(pwd, mode=2)
         elif enc == 'DES3' or enc == ENC['DES3']:
             o = DES3.new(pwd, mode=2)
+        elif enc == 'RSA' or enc == ENC['RSA']:
+            o = RSA.importKey(pwd)
         elif not enc or enc == 'None':
             txt = txt.rstrip(self.fillChar)
         else:
@@ -638,7 +659,7 @@ class Window(QtGui.QMainWindow):
         super(Window, self).__init__()
         self.resize(800, 400)
         self.setWindowTitle('Scrambled Egg :: Live Crypt')
-        self.setWindowIcon(QtGui.QIcon('icon.ico'))
+        self.setWindowIcon(QtGui.QIcon(os.getcwd() + '/icon.ico'))
         QtGui.QApplication.setStyle(QtGui.QStyleFactory.create('CleanLooks'))
         QtGui.QApplication.setPalette(QtGui.QApplication.style().standardPalette())
         self.SE = ScrambledEgg()
@@ -776,7 +797,7 @@ class Window(QtGui.QMainWindow):
         # Encryption/ decryption combo-boxes.
         self.comboCrypt.setToolTip('Select encryption algorithm; it will use the provided password')
         self.comboDecrypt.setToolTip('Select encryption algorithm; it will use the provided password')
-        for enc in sorted(ENC.keys()):
+        for enc in ENC.keys():
             self.comboCrypt.addItem(enc, enc)
             self.comboDecrypt.addItem(enc, enc)
 
@@ -869,19 +890,21 @@ class Window(QtGui.QMainWindow):
 
     def cleanupHtml(self, txt):
         #
-        txt = re.sub('''<span style="[0-9a-zA-Z "':;,-]+">([<>br/ ])</span>''', '', ' '.join(txt.split())) # Empty span.
+        txt = re.sub('''<span style="[0-9a-zA-Z "':;,-]+">([<>br/ ])</span>''', '', ' '.join(txt.split())) # Kill empty span.
         txt = re.sub('''<p style="[0-9a-zA-Z "':;,-]+">[ ]?</p>''', '', txt) # Kill empty paragraphs.
+        txt = txt.replace('> <p style', '><p style')
+        txt = txt.replace('>  <p style', '><p style')
         txt = txt.replace('</td> <td>', '</td><td>')
         txt = txt.replace('</tr> <tr>', '</tr><tr>')
         txt = txt.replace('</span> </p>', '</span></p>')
         txt = txt.replace('</p> <p ', '</p>\n<p ')
-        txt = txt.replace(' margin-top:0px;', '')
+        txt = txt.replace(' margin-top:0px;', '') # Delete obsolete styles.
         txt = txt.replace(' margin-bottom:0px;', '')
         txt = txt.replace(' margin-left:0px;', '')
         txt = txt.replace(' margin-right:0px;', '')
         txt = txt.replace(' -qt-block-indent:0;', '')
         txt = txt.replace(' text-indent:0px;', '')
-        txt = txt.replace(' style=""', '')
+        txt = txt.replace(' style=""', '') # Delete empty style.
         return txt.strip()
         #
 
@@ -917,6 +940,13 @@ class Window(QtGui.QMainWindow):
         post = self.postProcess.currentText()
         pwd = self.linePasswordL.text()
         tags = not self.setTags.isChecked()
+        #
+        # If encryption mode is RSA, reveal key path.
+        if enc=='RSA':
+            self.checkPwdL.setChecked(True)
+            self.checkPwdL.setText('<- Path')
+        else:
+            self.checkPwdL.setText('<- Pwd')
         #
         if self.setFormatting.isChecked() and not self.showHTML.isChecked():
             # HTML string.
@@ -973,6 +1003,13 @@ class Window(QtGui.QMainWindow):
         enc = self.comboDecrypt.currentText()
         post = self.postDecrypt.currentText()
         pwd = self.linePasswordR.text()
+        #
+        # If encryption mode is RSA, reveal key path.
+        if enc=='RSA':
+            self.checkPwdR.setChecked(True)
+            self.checkPwdR.setText('<- Path')
+        else:
+            self.checkPwdR.setText('<- Pwd')
         #
         if self.buttonDecryptMode.isChecked():
             self.statusBar.setStyleSheet('color:blue')
