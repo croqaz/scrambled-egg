@@ -9,8 +9,10 @@
 import os, sys
 import re, math
 import string
+import urllib
 import base64
 import binascii as ba
+import json
 import hashlib
 import bz2, zlib
 from collections import OrderedDict
@@ -35,14 +37,15 @@ ROT = string.maketrans('nopqrstuvwxyzabcdefghijklmNOPQRSTUVWXYZABCDEFGHIJKLM', '
 #
 SCRAMBLE = ['None', 'ROT13', 'ZLIB', 'BZ2']
 SCRAMBLE_D = {'None':'N', 'ROT13':'R', 'ZLIB':'ZL', 'BZ2':'BZ'}
-ENC = OrderedDict([('AES', 'AE'), ('Blowfish', 'B'), ('ARC2', 'AR'), ('CAST', 'CA'), ('DES3', 'D'), ('RSA', 'RS'), ('None', 'N')])
-ENCODE = ['Base64 Codec', 'Base32 Codec', 'HEX Codec', 'Quopri Codec', 'String Escape', 'UU Codec', 'XML']
-ENCODE_D = {'Base64 Codec':'64', 'Base32 Codec':'32', 'HEX Codec':'H', 'Quopri Codec':'Q', 'String Escape':'STR', 'UU Codec':'UU', 'XML':'XML'}
+ENC = OrderedDict([('AES', 'AES'), ('Blowfish', 'B'), ('ARC2', 'ARC'), ('CAST', 'CA'), ('DES3', 'D'), ('RSA', 'RSA'), ('None', 'N')])
+ENCODE = ['Base64 Codec', 'Base32 Codec', 'HEX Codec', 'Quopri Codec', 'String Escape', 'UU Codec', 'Json', 'XML']
+ENCODE_D = {'Base64 Codec':'64', 'Base32 Codec':'32', 'HEX Codec':'H', 'Quopri Codec':'Q', 'String Escape':'STR', 'UU Codec':'UU', 'Json':'Json', 'XML':'XML'}
 NO_TAGS = re.compile(
     '<#>(?P<ts>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})</?#>|' \
     '\[#\](?P<tq>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})\[#\]|' \
     '\{#\}(?P<ta>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})\{#\}|' \
     '\(#\)(?P<tp>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})\(#\)')
+#
 # These numbers are used when (re)creating PNG images.
 SCRAMBLE_NR = {'None':'1', 'ROT13':'2', 'ZLIB':'3', 'BZ2':'4'}
 ENCRYPT_NR = {'AES':'1', 'ARC2':'2', 'CAST':'3', 'Blowfish':'5', 'DES3':'4', 'None':'9'}
@@ -214,6 +217,11 @@ class ScrambledEgg():
                 final = '<#>%s:%s:%s<#>%s' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec',''), encrypted.encode('uu'))
             else:
                 final = encrypted.encode('uu')
+        elif post == 'Json':
+            if tags:
+                final = json.dumps({'pre':SCRAMBLE_D[pre], 'enc':ENC[enc], 'post':ENCODE_D[post], 'data':ba.b2a_base64(encrypted)})
+            else:
+                final = json.dumps({'data':ba.b2a_base64(encrypted)})
         elif post == 'XML':
             if tags:
                 final = '<root>\n<#>%s:%s:%s</#>\n<data>%s</data>\n</root>' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post], ba.b2a_base64(encrypted))
@@ -268,11 +276,16 @@ class ScrambledEgg():
         elif pre == 'Quopri Codec' or pre == ENCODE_D['Quopri Codec']:
             try: txt = ba.a2b_qp(q_txt, header=True)
             except: self.__error(1, pre, enc, post) ; return
-        elif pre == 'String Escape'  or pre == ENCODE_D['String Escape']:
+        elif pre == 'String Escape' or pre == ENCODE_D['String Escape']:
             try: txt = txt.decode('string_escape')
             except: self.__error(1, pre, enc, post) ; return
-        elif pre == 'UU Codec'  or pre == ENCODE_D['UU Codec']:
+        elif pre == 'UU Codec' or pre == ENCODE_D['UU Codec']:
             try: txt = txt.decode('uu')
+            except: self.__error(1, pre, enc, post) ; return
+        elif pre == 'Json' or pre == ENCODE_D['Json']:
+            try:
+                txt = json.loads(txt)
+                txt = ba.a2b_base64(txt['data'])
             except: self.__error(1, pre, enc, post) ; return
         elif pre == 'XML':
             try:
@@ -656,6 +669,7 @@ QComboBox {color:#2E2633;}
 QComboBox QAbstractItemView {selection-background-color:#E1EDB9;}
 '''
 
+
 class Window(QtGui.QMainWindow):
 
     def __init__(self):
@@ -668,6 +682,7 @@ class Window(QtGui.QMainWindow):
         self.setWindowIcon(QtGui.QIcon(os.getcwd() + '/icon.ico'))
         QtGui.QApplication.setStyle(QtGui.QStyleFactory.create('CleanLooks'))
         QtGui.QApplication.setPalette(QtGui.QApplication.style().standardPalette())
+        self.setAcceptDrops(True)
         self.SE = ScrambledEgg()
 
         self.centralWidget = QtGui.QWidget(self) # Central Widget.
@@ -850,6 +865,37 @@ class Window(QtGui.QMainWindow):
         #
         # ACTION !
         self.onCryptMode()
+        #
+
+    def dragEnterEvent(self, e):
+        #
+        mime_data = e.mimeData()
+
+        # Accept plain text, HTML text and file paths.
+        if mime_data.hasHtml() or mime_data.hasText() or mime_data.hasFormat('text/uri-list'):
+            e.accept()
+        else:
+            e.ignore()
+        #
+
+    def dropEvent(self, e):
+        #
+        mime_data = e.mimeData()
+
+        if mime_data.hasFormat('text/html'):
+            dataf = mime_data.html()
+            self.leftText.setHtml(dataf)
+
+        elif mime_data.hasFormat('text/plain'):
+            dataf = mime_data.text()
+            self.leftText.setPlainText(dataf)
+
+        elif mime_data.hasFormat('text/uri-list'):
+            uri = mime_data.data('text/uri-list')
+            uris = str(uri).split('\r\n')[:-1]
+            # List of dragged files.
+            for url in uris:
+                print urllib.urlopen(url)
         #
 
     def onCryptMode(self):
