@@ -39,7 +39,7 @@ SCRAMBLE = ['None', 'ROT13', 'ZLIB', 'BZ2']
 SCRAMBLE_D = {'None':'N', 'ROT13':'R', 'ZLIB':'ZL', 'BZ2':'BZ'}
 ENC = OrderedDict([('AES', 'AES'), ('Blowfish', 'B'), ('ARC2', 'ARC'), ('CAST', 'CA'), ('DES3', 'D'), ('RSA', 'RSA'), ('None', 'N')])
 ENCODE = ['Base64 Codec', 'Base32 Codec', 'HEX Codec', 'Quopri Codec', 'String Escape', 'UU Codec', 'Json', 'XML']
-ENCODE_D = {'Base64 Codec':'64', 'Base32 Codec':'32', 'HEX Codec':'H', 'Quopri Codec':'Q', 'String Escape':'STR', 'UU Codec':'UU', 'Json':'Json', 'XML':'XML'}
+ENCODE_D = {'Base64 Codec':'64', 'Base32 Codec':'32', 'HEX Codec':'H', 'Quopri Codec':'Q', 'String Escape':'STR', 'UU Codec':'UU', 'Json':'JS', 'XML':'XML'}
 NO_TAGS = re.compile(
     '<#>(?P<ts>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})</?#>|' \
     '\[#\](?P<tq>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})\[#\]|' \
@@ -128,7 +128,7 @@ class ScrambledEgg():
             else:
                 pwd += 'X' * ( (((L/24)+1)*24) - L )
 
-        elif enc == 'RSA' or enc == ENC['RSA']:
+        elif enc == 'RSA':
             # Read the public/ private key from file.
             pwd = open(pwd, 'rb').read()
 
@@ -159,8 +159,11 @@ class ScrambledEgg():
             return
         #
         pwd = self._fix_password(pwd, enc)
-        L = len(txt)
-        txt += self.fillChar * ( (((L/16)+1)*16) - L )
+        #
+        # No need to pad text for RSA.
+        if enc != 'RSA':
+            L = len(txt)
+            txt += self.fillChar * ( (((L/16)+1)*16) - L )
         #
         # Encryption operation.
         if enc == 'AES':
@@ -180,7 +183,20 @@ class ScrambledEgg():
             encrypted = o.encrypt(txt)
         elif enc == 'RSA':
             o = RSA.importKey(pwd)
-            encrypted = '\n'.join(o.encrypt(txt, 0))
+            # Damn it, this operation is very slow.
+            b64_txt = ba.b2a_base64(txt)
+            to_join = []
+            step = 0
+            while 1:
+                # Read 128 characters at a time.
+                s = b64_txt[step*128:(step+1)*128]
+                if not s: break
+                # Encrypt with RSA and append the result to list.
+                to_join.append(o.encrypt(s, 0)[0])
+                step += 1
+            # Join the results.
+            encrypted = '\r\r\r'.join(to_join)
+            del b64_txt, to_join, step
         elif enc == 'None':
             encrypted = txt
         else:
@@ -219,7 +235,7 @@ class ScrambledEgg():
                 final = encrypted.encode('uu')
         elif post == 'Json':
             if tags:
-                final = json.dumps({'pre':SCRAMBLE_D[pre], 'enc':ENC[enc], 'post':ENCODE_D[post], 'data':ba.b2a_base64(encrypted)})
+                final = json.dumps({'tags':('<#>%s:%s:%s</#>' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post])), 'data':ba.b2a_base64(encrypted)})
             else:
                 final = json.dumps({'data':ba.b2a_base64(encrypted)})
         elif post == 'XML':
@@ -310,19 +326,25 @@ class ScrambledEgg():
             o = Blowfish.new(pwd, mode=2)
         elif enc == 'DES3' or enc == ENC['DES3']:
             o = DES3.new(pwd, mode=2)
-        elif enc == 'RSA' or enc == ENC['RSA']:
+        elif enc == 'RSA':
             o = RSA.importKey(pwd)
         elif not enc or enc == 'None':
             txt = txt.rstrip(self.fillChar)
         else:
             raise Exception('Invalid decrypt "%s" !' % enc)
         #
-        if enc == 'RSA' or enc == ENC['RSA']:
-            # RSA is really slooooow.
+        if enc == 'RSA':
+            # RSA decryption is really slooooow.
             try:
-                to_decrypt = tuple(txt.splitlines())
-                txt = o.decrypt(to_decrypt)
+                to_decrypt = txt.split('\r\r\r')
+                to_join = []
+                for s in to_decrypt:
+                    to_join.append(o.decrypt(s))
+                # Join the chunks.
+                txt = ba.a2b_base64(''.join(to_join))
+                del to_join, to_decrypt
             except: self.__error(2, pre, enc, post) ; return
+        #
         elif enc != 'None':
             try: txt = o.decrypt(txt).rstrip(self.fillChar)
             except: self.__error(2, pre, enc, post) ; return
