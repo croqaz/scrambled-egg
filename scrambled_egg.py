@@ -10,13 +10,13 @@ import os, sys
 import re, math
 import string
 import urllib
-import base64
 import binascii as ba
+import base64
 import json
-import hashlib
 import bz2, zlib
 from collections import OrderedDict
 
+from Crypto.Hash import MD5
 from Crypto.Cipher import AES
 from Crypto.Cipher import ARC2
 from Crypto.Cipher import CAST
@@ -93,50 +93,38 @@ class ScrambledEgg():
         L = len(pwd)
 
         if enc == 'AES' or enc == ENC['AES']:
-            # MAXIMUM 32 characters for AES !
-            if L == 32:
-                pass
-            elif L > 32:
-                pwd = hashlib.sha256(pwd).digest()
-            else:
-                pwd += 'X' * ( (((L/16)+1)*16) - L )
-
-        elif enc == 'CAST' or enc == ENC['CAST']:
-            # MAXIMUM 8 characters for CAST !
-            if L == 8:
-                pass
-            elif L > 8:
-                pwd = hashlib.md5(pwd).digest()
-            else:
-                pwd += 'X' * ( (((L/8)+1)*8) - L )
+            key_size = 32
 
         elif enc == 'Blowfish' or enc == ENC['Blowfish']:
-            # MAXIMUM 56 characters for Blowfish !
-            if L == 56:
-                pass
-            elif L > 56:
-                pwd = hashlib.sha224(pwd).hexdigest()
-            else:
-                pwd += 'X' * ( (((L/8)+1)*8) - L )
+            key_size = 56
+
+        elif enc == 'ARC2' or enc == ENC['ARC2']:
+            key_size = 128
+
+        elif enc == 'CAST' or enc == ENC['CAST']:
+            key_size = 8
 
         elif enc == 'DES3' or enc == ENC['DES3']:
-            # MAXIMUM 24 characters for DES3 !
-            if L == 24:
-                pass
-            elif L > 24:
-                pwd = 'XX' + hashlib.sha1(pwd).digest() + 'XX'
-            else:
-                pwd += 'X' * ( (((L/24)+1)*24) - L )
+            key_size = 24
 
         elif enc == 'RSA':
-            # Read the public/ private key from file.
-            pwd = open(pwd, 'rb').read()
+            # Read the public/ private key from file and return.
+            return open(pwd, 'rb').read()
 
         elif not pwd:
             # Only for NULL passwords.
-            pwd = 'X'
+            return 'X'
 
-        return pwd
+        key = ''
+        md_hash = MD5.new(pwd)
+
+        # Scramble password many times.
+        for i in range(666):
+            key += md_hash.digest()
+            md_hash.update(key)
+
+        # The password for encryption.
+        return key[-key_size:]
         #
 
     def encrypt(self, txt, pre, enc, post, pwd, tags=True):
