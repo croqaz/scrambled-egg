@@ -727,7 +727,8 @@ class Window(QtGui.QMainWindow):
         self.checkPwdR = QtGui.QCheckBox('<- Pwd', self.centralWidget) # Right side.
         self.nrLettersR = QtGui.QLabel('', self.centralWidget) # Right side.
         self.loadFile = QtGui.QPushButton('Import', self.centralWidget) # Right side.
-        self.saveFile = QtGui.QPushButton('Export', self.centralWidget) # Left side.
+        self.saveFile = QtGui.QPushButton('Export', self.centralWidget) # Right side.
+        self.helpButton = QtGui.QPushButton('Help !', self.centralWidget) # Right side.
 
         self.layout.addWidget(self.buttonCryptMode, 1, 1, 1, 5)
         self.layout.addWidget(self.buttonDecryptMode, 1, 6, 1, 5)
@@ -744,6 +745,7 @@ class Window(QtGui.QMainWindow):
 
         self.layout.addWidget(self.loadFile, 21, 6, 1, 1)
         self.layout.addWidget(self.saveFile, 21, 7, 1, 1)
+        self.layout.addWidget(self.helpButton, 21, 10, 1, 1)
 
         self.layout.addWidget(self.linePasswordL, 3, 1, 1, 4)
         self.layout.addWidget(self.checkPwdL, 3, 5, 1, 1)
@@ -771,6 +773,7 @@ class Window(QtGui.QMainWindow):
         self.buttonDecryptMode.setCheckable(True)
         self.buttonDecryptMode.setToolTip('Switch to Decryption mode')
         self.buttonDecryptMode.setStyleSheet(STYLE_BUTTON)
+        self.helpButton.setStyleSheet(STYLE_BUTTON)
 
         # Some styles.
         self.loadFile.setStyleSheet(STYLE_BUTTON)
@@ -870,6 +873,7 @@ class Window(QtGui.QMainWindow):
         #
         self.saveFile.clicked.connect(self.onSave)
         self.loadFile.clicked.connect(self.onLoad)
+        self.helpButton.clicked.connect(self.onHelp)
         self.setFormatting.toggled.connect(self.onLeftTextChanged)
         self.setTags.toggled.connect(self.onLeftTextChanged)
         self.showHTML.toggled.connect(self.toggleHtml)
@@ -1162,6 +1166,24 @@ class Window(QtGui.QMainWindow):
             self.onDecryptMode()
             self.onRightTextChanged()
             self.rightText.setFocus()
+        #
+
+    def onHelp(self):
+        #
+        QtGui.QMessageBox.about(self.centralWidget, 'Scrambled Egg Help',
+            '<br><b>Copyright (C) 2010-2011</b> : Cristi Constantin. All rights reserved.<br>'
+            '<b>Website</b> : http://scrambled-egg.googlecode.com/<br><br>'
+            'Scrambled-Egg is a software designed for encrypting your sensitive data.<br>'
+            'This is done in <font color="blue"><b>3 steps</b></font> : <i>pre encryption</i>, <i>encryption</i>, and <i>post encryption</i>.<br>'
+            'The input data can be : plain text, formatted text, or a binary file.<br><br>'
+            '<font color="blue"><b>Step 1</b></font> can compress your data using <b>ZLIB</b>, or <b>BZ2</b>. This step is optional.<br>'
+            '<font color="blue"><b>Step 2</b></font> is the real encryption, for example with <b>AES</b>, or <b>Blowfish</b>. '
+            'The password is used only in this step. '
+            'For <b>RSA</b> encryption, instead of the password, you have to type the path to the public or private RSA key.<br>'
+            '<font color="blue"><b>Step 3</b></font> will encode your data. This step is required, the rest are optional. '
+            'There are a lot of encodings available, for example <b>Base64</b>, or <b>HEX</b>.<br><br>'
+            'This FREE program is distributed in the hope that it will be useful.<br><br>'
+            'Enjoy!')
         #
 
 #
