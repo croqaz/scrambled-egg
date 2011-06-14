@@ -59,7 +59,10 @@ for f in files:
                 #
                 ti = clock()
                 # Generate random password.
-                pwd = RandPassword()
+                if enc == 'RSA':
+                    pwd = 'k1.txt'
+                else:
+                    pwd = RandPassword()
                 # Encrypting without adding tags.
                 _enc = s.encrypt(txt, pre, enc, post, pwd, False)
                 # Inserting random tag.

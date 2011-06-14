@@ -58,6 +58,7 @@ class ScrambledEgg():
     def __init__(self):
         self.error = '' # Error string.
         self.fillChar = '\x01' # This is probably the best filling character.
+        self.rsaFillChar = (unichr(2662)*2).encode('utf')
         self.pre = ''   # Current operations, in order.
         self.enc = ''
         self.post = ''
@@ -183,7 +184,7 @@ class ScrambledEgg():
                 to_join.append(o.encrypt(s, 0)[0])
                 step += 1
             # Join the results.
-            encrypted = '\r\r\r'.join(to_join)
+            encrypted = self.rsaFillChar.join(to_join)
             del b64_txt, to_join, step
         elif enc == 'None':
             encrypted = txt
@@ -324,7 +325,7 @@ class ScrambledEgg():
         if enc == 'RSA':
             # RSA decryption is really slooooow.
             try:
-                to_decrypt = txt.split('\r\r\r')
+                to_decrypt = txt.split(self.rsaFillChar)
                 to_join = []
                 for s in to_decrypt:
                     to_join.append(o.decrypt(s))
