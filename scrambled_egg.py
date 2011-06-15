@@ -1120,6 +1120,9 @@ class Window(QtGui.QMainWindow):
         elif post=='XML':
             path = f.getSaveFileName(self, 'Save crypted text', os.getcwd(), 'XML Files (*.xml)')
             ext = '.xml'
+        elif post=='Json':
+            path = f.getSaveFileName(self, 'Save crypted text', os.getcwd(), 'Json Files (*.json)')
+            ext = '.json'
         else:
             path = f.getSaveFileName(self, 'Save crypted text', os.getcwd(), 'All files (*.*)')
             ext = ''
