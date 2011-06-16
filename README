@@ -72,7 +72,8 @@
   What's new:
 ---------------
  * Version 0.4 brings the following changes :
-    - added RSA encryption and Json encoding. RSA should only be used for small text messages;
+    - added RSA encryption and Json encoding.
+      RSA key must be larger than 1024 and multiple by 256. RSA import formats are PEM and DER;
     - password enhancement. The key is derived from original password making the encryption stronger;
     - drag & drop your text in the left area.
 

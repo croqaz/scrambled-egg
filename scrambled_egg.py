@@ -40,17 +40,24 @@ SCRAMBLE_D = {'None':'N', 'ROT13':'R', 'ZLIB':'ZL', 'BZ2':'BZ'}
 ENC = OrderedDict([('AES', 'AES'), ('Blowfish', 'B'), ('ARC2', 'ARC'), ('CAST', 'CA'), ('DES3', 'D'), ('RSA', 'RSA'), ('None', 'N')])
 ENCODE = ['Base64 Codec', 'Base32 Codec', 'HEX Codec', 'Quopri Codec', 'String Escape', 'UU Codec', 'Json', 'XML']
 ENCODE_D = {'Base64 Codec':'64', 'Base32 Codec':'32', 'HEX Codec':'H', 'Quopri Codec':'Q', 'String Escape':'STR', 'UU Codec':'UU', 'Json':'JS', 'XML':'XML'}
+#
 NO_TAGS = re.compile(
     '<#>(?P<ts>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})</?#>|' \
     '\[#\](?P<tq>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})\[#\]|' \
     '\{#\}(?P<ta>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})\{#\}|' \
-    '\(#\)(?P<tp>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})\(#\)')
+    '\(#\)(?P<tp>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})\(#\)|' \
+    '(?P<tx><pre>[0-9a-zA-Z ]{1,3}</pre>\s*?<enc>[0-9a-zA-Z ]{1,3}</enc>\s*?<post>[0-9a-zA-Z ]{1,3}</post>)|' \
+    '(?P<tj>"pre": "[0-9a-zA-Z ]{1,3}",\s*?"enc": "[0-9a-zA-Z ]{1,3}",\s*?"post": "[0-9a-zA-Z ]{1,3}")')
 #
 # These numbers are used when (re)creating PNG images.
 SCRAMBLE_NR = {'None':'1', 'ROT13':'2', 'ZLIB':'3', 'BZ2':'4'}
 ENCRYPT_NR = {'AES':'1', 'ARC2':'2', 'CAST':'3', 'Blowfish':'5', 'DES3':'4', 'None':'9'}
 ENCODE_NR = {'Base64 Codec':'4', 'Base32 Codec':'2', 'HEX Codec':'1', 'Quopri Codec':'9', 'String Escape':'6', 'UU Codec':'8', 'XML':'7'}
 #
+
+def findg(g):
+    for i in g:
+        if i: return ''.join(i.split())
 
 
 class ScrambledEgg():
@@ -224,14 +231,16 @@ class ScrambledEgg():
                 final = encrypted.encode('uu')
         elif post == 'Json':
             if tags:
-                final = json.dumps({'tags':('<#>%s:%s:%s</#>' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post])), 'data':ba.b2a_base64(encrypted)})
+                final = '{"pre": "%s", "enc": "%s", "post": "%s", "data": "%s"}' % \
+                    (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post], ba.b2a_base64(encrypted).strip())
             else:
-                final = json.dumps({'data':ba.b2a_base64(encrypted)})
+                final = json.dumps({'data':ba.b2a_base64(encrypted).strip()})
         elif post == 'XML':
             if tags:
-                final = '<root>\n<#>%s:%s:%s</#>\n<data>%s</data>\n</root>' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post], ba.b2a_base64(encrypted))
+                final = '<root>\n<pre>%s</pre><enc>%s</enc><post>%s</post>\n<data>%s</data>\n</root>' % \
+                    (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post], ba.b2a_base64(encrypted).strip())
             else:
-                final = '<root>\n<data>%s</data>\n</root>' % ba.b2a_base64(encrypted)
+                final = '<root>\n<data>%s</data>\n</root>' % ba.b2a_base64(encrypted).strip()
         else:
             raise Exception('Invalid codec "%s" !' % post)
         #
@@ -241,20 +250,34 @@ class ScrambledEgg():
     def decrypt(self, txt, pre, enc, post, pwd):
         #
         # Trying to identify and/or delete pre/enc/post tags.
+        #
         try:
             re_groups = re.search(NO_TAGS, txt).groups()
-            tags = re_groups[0] or re_groups[1] or re_groups[2] or re_groups[3]
-            txt = re.sub(NO_TAGS, '', txt)
-            # Identify here.
-            if not pre:
+            tags = findg(re_groups)
+
+            # If Json.
+            if tags.startswith('"pre"'):
+                pre = 'JS'
+                enc = re.search('"enc":"([0-9a-zA-Z ]{1,3})"', tags).group(1)
+                post = re.search('"pre":"([0-9a-zA-Z ]{1,3})"', tags).group(1)
+                txt = re.search('"data":\s*"(.*)"', txt, re.S).group(1)
+
+            # If XML.
+            elif tags.startswith('<pre>'):
+                pre = 'XML'
+                enc = re.search('<enc>([0-9a-zA-Z ]{1,3})</enc>', tags).group(1)
+                post = re.search('<pre>([0-9a-zA-Z ]{1,3})</pre>', tags).group(1)
+                txt = re.search('<data>(.*)</data>', txt, re.S).group(1)
+
+            else:
                 pre = tags.split(':')[2]
-                self.pre = pre
-            if not enc:
                 enc = tags.split(':')[1]
-                self.enc = enc
-            if not post:
                 post = tags.split(':')[0]
-                self.post = post
+
+            txt = re.sub(NO_TAGS, '', txt)
+            self.pre = pre
+            self.enc = enc
+            self.post = post
         except:
             pass
         #
@@ -288,18 +311,10 @@ class ScrambledEgg():
             try: txt = txt.decode('uu')
             except: self.__error(1, pre, enc, post) ; return
         elif pre == 'Json' or pre == ENCODE_D['Json']:
-            try:
-                txt = json.loads(txt)
-                txt = ba.a2b_base64(txt['data'])
+            try: txt = ba.a2b_base64(txt)
             except: self.__error(1, pre, enc, post) ; return
         elif pre == 'XML':
-            try:
-                txt = txt.replace('\n', '')
-                txt = txt.replace('<root>', '')
-                txt = txt.replace('</root>', '')
-                txt = txt.replace('<data>', '')
-                txt = txt.replace('</data>', '')
-                txt = ba.a2b_base64(txt)
+            try: txt = ba.a2b_base64(txt)
             except: self.__error(1, pre, enc, post) ; return
         else:
             raise Exception('Invalid codec "%s" !' % pre)
@@ -1058,10 +1073,33 @@ class Window(QtGui.QMainWindow):
         txt = self.rightText.toPlainText()
         #
         try:
-            tags = re.search(NO_TAGS, txt).group(1)
-            self.postDecrypt.setCurrentIndex( self.postDecrypt.findText(tags.split(':')[0], QtCore.Qt.MatchFlag(QtCore.Qt.MatchContains)) )
-            self.comboDecrypt.setCurrentIndex( self.comboDecrypt.findText(tags.split(':')[1], QtCore.Qt.MatchFlag(QtCore.Qt.MatchContains)) )
-            self.preDecrypt.setCurrentIndex( self.preDecrypt.findText(tags.split(':')[2], QtCore.Qt.MatchFlag(QtCore.Qt.MatchContains)) )
+            re_groups = re.search(NO_TAGS, txt).groups()
+            tags = findg(re_groups)
+
+            # If Json.
+            if tags.startswith('"pre"'):
+                pre = 'JS'
+                enc = re.search('"enc":"([0-9a-zA-Z ]{1,3})"', tags).group(1)
+                post = re.search('"pre":"([0-9a-zA-Z ]{1,3})"', tags).group(1)
+                txt = re.search('"data":\s*"(.*)"', txt, re.S).group(1)
+            # If XML.
+            elif tags.startswith('<pre>'):
+                pre = 'XML'
+                enc = re.search('<enc>([0-9a-zA-Z ]{1,3})</enc>', tags).group(1)
+                post = re.search('<pre>([0-9a-zA-Z ]{1,3})</pre>', tags).group(1)
+                txt = re.search('<data>(.*)</data>', txt, re.S).group(1)
+
+            # Identify the rest.
+            if not pre:
+                pre = tags.split(':')[2]
+            if not enc:
+                enc = tags.split(':')[1]
+            if not post:
+                post = tags.split(':')[0]
+
+            self.postDecrypt.setCurrentIndex( self.postDecrypt.findText(post, QtCore.Qt.MatchFlag(QtCore.Qt.MatchContains)) )
+            self.comboDecrypt.setCurrentIndex( self.comboDecrypt.findText(enc, QtCore.Qt.MatchFlag(QtCore.Qt.MatchContains)) )
+            self.preDecrypt.setCurrentIndex( self.preDecrypt.findText(pre, QtCore.Qt.MatchFlag(QtCore.Qt.MatchContains)) )
         except:
             pass
         #

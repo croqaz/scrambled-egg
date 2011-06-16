@@ -38,6 +38,7 @@ def splitthousands(s, sep=','):
 log.basicConfig(level=10, format='%(asctime)s %(levelname)-10s %(message)s', datefmt='%y-%m-%d %H:%M:%S', filename='Testing1_Log.Log', filemode='w')
 console = log.StreamHandler() ; console.setLevel(10) ; log.getLogger('').addHandler(console) # Print + write log.
 log.info('Testing started, %i files.\n' % len(files))
+log.info('Found %i files:\n%s\n' % (len(files), files))
 
 for f in files:
     #
@@ -56,6 +57,8 @@ for f in files:
                 #
                 # IGNORE Quopri, it's still UNSTABLE.
                 if post == 'Quopri Codec': continue
+                # IGNORE RSA.
+                if enc == 'RSA': continue
                 #
                 ti = clock()
                 # Generate random password.
@@ -66,13 +69,24 @@ for f in files:
                 # Encrypting without adding tags.
                 _enc = s.encrypt(txt, pre, enc, post, pwd, False)
                 # Inserting random tag.
-                tag = ['<#>%s:%s:%s<#>','[#]%s:%s:%s[#]','{#}%s:%s:%s{#}','(#)%s:%s:%s(#)'][random.randrange(0, 4)]
-                tag = tag % (_SCRAMBLE_D[pre], _ENC[enc], _ENCODE_D[post].replace(' Codec',''))
+                if post=='XML':
+                    tag = '<pre>%s</pre><enc>%s</enc><post>%s</post>' % (_SCRAMBLE_D[pre], _ENC[enc], _ENCODE_D[post])
+                elif post=='Json':
+                    tag = '"pre": "%s", "enc": "%s", "post": "%s"' % (_SCRAMBLE_D[pre], _ENC[enc], _ENCODE_D[post])
+                else:
+                    tag = ['<#>%s:%s:%s<#>','[#]%s:%s:%s[#]','{#}%s:%s:%s{#}','(#)%s:%s:%s(#)'][random.randrange(0, 4)]
+                    tag = tag % (_SCRAMBLE_D[pre], _ENC[enc], _ENCODE_D[post].replace(' Codec',''))
                 #
                 # Put tag randomly at the beggining, or at the end, and
                 # call decrypt without telling Scrambled-Egg HOW to decrypt,
                 # the methods will be extracted from tags.
-                if len(pwd) % 2:
+                if post=='XML':
+                    _enc = _enc.replace('</root>', tag+'</root>')
+                    _dec = s.decrypt(_enc, None, None, None, pwd)
+                elif post=='Json':
+                    _enc = _enc.replace('{', '{'+tag+', ')
+                    _dec = s.decrypt(_enc, None, None, None, pwd)
+                elif len(pwd) % 2:
                     _dec = s.decrypt(tag+_enc, None, None, None, pwd)
                 else:
                     _dec = s.decrypt(_enc+tag, None, None, None, pwd)
