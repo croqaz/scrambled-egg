@@ -65,10 +65,11 @@ class ScrambledEgg():
     def __init__(self):
         self.error = '' # Error string.
         self.fillChar = '\x01' # This is probably the best filling character.
-        self.rsaFillChar = (unichr(2662)*2).encode('utf')
+        self.rsaFillChar = unichr(2662).encode('utf')
         self.pre = ''   # Current operations, in order.
         self.enc = ''
         self.post = ''
+        self.rsa_path = ''
 
     def __error(self, step, pre, enc, post, field='R'):
         #
@@ -90,7 +91,7 @@ class ScrambledEgg():
 
     def _fix_password(self, pwd, enc):
         '''
-        Adapt the password for each encryption. \n\
+        Scramble and adapt the password for each encryption. \n\
         AES accepts maxim 32 characters. \n\
         ARC2 accepts maxim 128 characters. \n\
         CAST accepts maxim 8 characters. \n\
@@ -98,8 +99,6 @@ class ScrambledEgg():
         DES3 accepts maxim 24 characters.
         '''
         #
-        L = len(pwd)
-
         if enc == 'AES' or enc == ENC['AES']:
             key_size = 32
 
@@ -115,13 +114,19 @@ class ScrambledEgg():
         elif enc == 'DES3' or enc == ENC['DES3']:
             key_size = 24
 
-        elif enc == 'RSA':
-            # Read the public/ private key from file and return.
-            return open(pwd, 'rb').read()
+        elif enc == 'RSA' and self.rsa_path:
+            # Read the public/ private key from file, encrypt password and return.
+            rsa_key = open(self.rsa_path, 'rb').read()
+            o = RSA.importKey(rsa_key)
+            enc_pwd = o.encrypt(pwd[:128], 0)[0]
+            return enc_pwd[-56:]
 
-        elif not pwd:
+        else:
+            raise Exception('Fix password: Invalid encryption mode "%s" !' % enc)
+
+        if not pwd:
             # Only for NULL passwords.
-            return 'X'
+            return key_size * 'X'
 
         key = ''
         md_hash = MD5.new(pwd)
@@ -150,16 +155,14 @@ class ScrambledEgg():
             raise Exception('Invalid scramble "%s" !' % pre)
         #
         # Check RSA key path.
-        if enc == 'RSA' and not os.path.exists(pwd):
+        if enc == 'RSA' and not os.path.exists(self.rsa_path):
+            print 'RSA encryption must specify a valid path !'
             self.__error(2, pre, enc, post, field='L')
             return
         #
         pwd = self._fix_password(pwd, enc)
-        #
-        # No need to pad text for RSA.
-        if enc != 'RSA':
-            L = len(txt)
-            txt += self.fillChar * ( (((L/16)+1)*16) - L )
+        L = len(txt)
+        txt += self.fillChar * ( (((L/16)+1)*16) - L )
         #
         # Encryption operation.
         if enc == 'AES':
@@ -178,21 +181,9 @@ class ScrambledEgg():
             o = DES3.new(pwd, mode=2)
             encrypted = o.encrypt(txt)
         elif enc == 'RSA':
-            o = RSA.importKey(pwd)
-            # Damn it, this operation is very slow.
-            b64_txt = ba.b2a_base64(txt)
-            to_join = []
-            step = 0
-            while 1:
-                # Read 128 characters at a time.
-                s = b64_txt[step*128:(step+1)*128]
-                if not s: break
-                # Encrypt with RSA and append the result to list.
-                to_join.append(o.encrypt(s, 0)[0])
-                step += 1
-            # Join the results.
-            encrypted = self.rsaFillChar.join(to_join)
-            del b64_txt, to_join, step
+            # Using Blowfish encryption for RSA.
+            o = Blowfish.new(pwd, mode=3)
+            encrypted = o.encrypt(txt)
         elif enc == 'None':
             encrypted = txt
         else:
@@ -231,12 +222,14 @@ class ScrambledEgg():
                 final = encrypted.encode('uu')
         elif post == 'Json':
             if tags:
+                # Format : {"pre": "XXX", "enc": "YYY", "post": "ZZZ", "data": "Blah blah blah"}
                 final = '{"pre": "%s", "enc": "%s", "post": "%s", "data": "%s"}' % \
                     (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post], ba.b2a_base64(encrypted).strip())
             else:
                 final = json.dumps({'data':ba.b2a_base64(encrypted).strip()})
         elif post == 'XML':
             if tags:
+                # Format : <root><pre>XXX</pre> <enc>YYY</enc> <post>ZZZ</post> <data>Blah blah blah</data></root>
                 final = '<root>\n<pre>%s</pre><enc>%s</enc><post>%s</post>\n<data>%s</data>\n</root>' % \
                     (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post], ba.b2a_base64(encrypted).strip())
             else:
@@ -257,24 +250,24 @@ class ScrambledEgg():
 
             # If Json.
             if tags.startswith('"pre"'):
-                pre = 'JS'
+                pre = 'Json'
                 enc = re.search('"enc":"([0-9a-zA-Z ]{1,3})"', tags).group(1)
                 post = re.search('"pre":"([0-9a-zA-Z ]{1,3})"', tags).group(1)
-                txt = re.search('"data":\s*"(.*)"', txt, re.S).group(1)
+                txt = re.search('"data":\s*"(.+?)"', txt, re.S).group(1)
 
             # If XML.
             elif tags.startswith('<pre>'):
                 pre = 'XML'
                 enc = re.search('<enc>([0-9a-zA-Z ]{1,3})</enc>', tags).group(1)
                 post = re.search('<pre>([0-9a-zA-Z ]{1,3})</pre>', tags).group(1)
-                txt = re.search('<data>(.*)</data>', txt, re.S).group(1)
+                txt = re.search('<data>(.+)</data>', txt, re.S).group(1)
 
             else:
                 pre = tags.split(':')[2]
                 enc = tags.split(':')[1]
                 post = tags.split(':')[0]
+                txt = re.sub(NO_TAGS, '', txt)
 
-            txt = re.sub(NO_TAGS, '', txt)
             self.pre = pre
             self.enc = enc
             self.post = post
@@ -282,7 +275,8 @@ class ScrambledEgg():
             pass
         #
         # Check RSA key path.
-        if enc == 'RSA' and not os.path.exists(pwd):
+        if enc == 'RSA' and not os.path.exists(self.rsa_path):
+            print 'RSA decryption must specify a valid path !'
             self.__error(2, pre, enc, post)
             return
         #
@@ -331,25 +325,14 @@ class ScrambledEgg():
         elif enc == 'DES3' or enc == ENC['DES3']:
             o = DES3.new(pwd, mode=2)
         elif enc == 'RSA':
-            o = RSA.importKey(pwd)
+            # Using Blowfish decryption for RSA.
+            o = Blowfish.new(pwd, mode=3)
         elif not enc or enc == 'None':
             txt = txt.rstrip(self.fillChar)
         else:
             raise Exception('Invalid decrypt "%s" !' % enc)
         #
-        if enc == 'RSA':
-            # RSA decryption is really slooooow.
-            try:
-                to_decrypt = txt.split(self.rsaFillChar)
-                to_join = []
-                for s in to_decrypt:
-                    to_join.append(o.decrypt(s))
-                # Join the chunks.
-                txt = ba.a2b_base64(''.join(to_join))
-                del to_join, to_decrypt
-            except: self.__error(2, pre, enc, post) ; return
-        #
-        elif enc != 'None':
+        if enc != 'None':
             try: txt = o.decrypt(txt).rstrip(self.fillChar)
             except: self.__error(2, pre, enc, post) ; return
         #
@@ -667,6 +650,7 @@ class ScrambledEgg():
 STYLE_BUTTON = '''
 QPushButton {color:#2E2633; background-color:#E1EDB9;}
 QPushButton:checked {color:#555152; background-color:#F3EFEE;}
+QPushButton:disabled {background-color:#EFEBE7;}
 QPushButton::hover {color:#99173C;}
 '''
 
@@ -724,13 +708,16 @@ class Window(QtGui.QMainWindow):
 
         self.buttonCryptMode = QtGui.QPushButton(self.centralWidget)
         self.buttonDecryptMode = QtGui.QPushButton(self.centralWidget)
+        self.buttonBrowseRSAL = QtGui.QPushButton('Browse', self.centralWidget)
+        self.buttonBrowseRSAR = QtGui.QPushButton('Browse', self.centralWidget)
 
-        self.preProcess = QtGui.QComboBox(self.centralWidget)  # Left side.
-        self.comboCrypt = QtGui.QComboBox(self.centralWidget)  # Left side.
-        self.postProcess = QtGui.QComboBox(self.centralWidget) # Left side.
-        self.linePasswordL = QtGui.QLineEdit(self.centralWidget) # Left side.
+        self.preProcess = QtGui.QComboBox(self.centralWidget)    # Left side.
+        self.comboCrypt = QtGui.QComboBox(self.centralWidget)    # Left side.
+        self.postProcess = QtGui.QComboBox(self.centralWidget)   # Left side.
+        self.linePasswordL = QtGui.QLineEdit(self.centralWidget) # Left password line.
+        self.lineRSAPathL = QtGui.QLineEdit(self.centralWidget)  # Left RSA Path line.
         self.checkPwdL = QtGui.QCheckBox('<- Pwd', self.centralWidget) # Left side.
-        self.nrLettersL = QtGui.QLabel('', self.centralWidget) # Left side.
+        self.nrLettersL = QtGui.QLabel('', self.centralWidget)   # Left side.
         self.setFormatting = QtGui.QCheckBox('Formatted text', self.centralWidget) # Left side.
         self.showHTML = QtGui.QCheckBox('Show HTML', self.centralWidget) # Left side.
         self.setTags = QtGui.QCheckBox('No tags', self.centralWidget) # Left side.
@@ -738,9 +725,10 @@ class Window(QtGui.QMainWindow):
         self.preDecrypt = QtGui.QComboBox(self.centralWidget)    # Right side.
         self.comboDecrypt = QtGui.QComboBox(self.centralWidget)  # Right side.
         self.postDecrypt = QtGui.QComboBox(self.centralWidget)   # Right side.
-        self.linePasswordR = QtGui.QLineEdit(self.centralWidget) # Right side.
+        self.linePasswordR = QtGui.QLineEdit(self.centralWidget) # Right password line.
+        self.lineRSAPathR = QtGui.QLineEdit(self.centralWidget)  # Right RSA Path line.
         self.checkPwdR = QtGui.QCheckBox('<- Pwd', self.centralWidget) # Right side.
-        self.nrLettersR = QtGui.QLabel('', self.centralWidget) # Right side.
+        self.nrLettersR = QtGui.QLabel('', self.centralWidget)   # Right side.
         self.loadFile = QtGui.QPushButton('Import', self.centralWidget) # Right side.
         self.saveFile = QtGui.QPushButton('Export', self.centralWidget) # Right side.
         self.helpButton = QtGui.QPushButton('Help !', self.centralWidget) # Right side.
@@ -767,6 +755,11 @@ class Window(QtGui.QMainWindow):
         self.layout.addWidget(self.linePasswordR, 3, 6, 1, 4)
         self.layout.addWidget(self.checkPwdR, 3, 10, 1, 1)
 
+        self.layout.addWidget(self.lineRSAPathL, 4, 1, 1, 4)
+        self.layout.addWidget(self.lineRSAPathR, 4, 6, 1, 4)
+        self.layout.addWidget(self.buttonBrowseRSAL, 4, 5, 1, 1)
+        self.layout.addWidget(self.buttonBrowseRSAR, 4, 10, 1, 1)
+
         self.layout.addWidget(self.nrLettersL, 21, 5, 1, 1)
         self.layout.addWidget(self.nrLettersR, 21, 10, 1, 1)
         self.layout.addWidget(self.leftText, 5, 1, 10, 5)
@@ -789,6 +782,7 @@ class Window(QtGui.QMainWindow):
         self.buttonDecryptMode.setToolTip('Switch to Decryption mode')
         self.buttonDecryptMode.setStyleSheet(STYLE_BUTTON)
         self.helpButton.setStyleSheet(STYLE_BUTTON)
+        self.helpButton.setMaximumWidth(60)
 
         # Some styles.
         self.loadFile.setStyleSheet(STYLE_BUTTON)
@@ -810,6 +804,21 @@ class Window(QtGui.QMainWindow):
         self.linePasswordR.setStyleSheet(STYLE_LINEEDIT)
         self.checkPwdR.setTristate(False)
         self.checkPwdR.setStyleSheet(STYLE_CHECKBOX)
+
+        # RSA Path.
+        self.lineRSAPathL.setStyleSheet(STYLE_LINEEDIT)
+        self.lineRSAPathL.hide()
+        self.lineRSAPathR.setStyleSheet(STYLE_LINEEDIT)
+        self.lineRSAPathR.hide()
+        self.lineRSAPathR.setDisabled(True)
+
+        self.buttonBrowseRSAL.setStyleSheet(STYLE_BUTTON)
+        self.buttonBrowseRSAL.setMaximumWidth(60)
+        self.buttonBrowseRSAL.hide()
+        self.buttonBrowseRSAR.setStyleSheet(STYLE_BUTTON)
+        self.buttonBrowseRSAR.setMaximumWidth(60)
+        self.buttonBrowseRSAR.hide()
+        self.buttonBrowseRSAR.setDisabled(True)
 
         # Formatted text.
         self.setFormatting.setTristate(False)
@@ -936,9 +945,13 @@ class Window(QtGui.QMainWindow):
         self.buttonDecryptMode.setText('Decrypt Mode')
         #
         self.linePasswordL.setDisabled(False)
+        self.lineRSAPathL.setDisabled(False)
+        self.buttonBrowseRSAL.setDisabled(False)
         self.leftText.setDisabled(False)
         #
         self.linePasswordR.setDisabled(True)
+        self.lineRSAPathR.setDisabled(True)
+        self.buttonBrowseRSAR.setDisabled(True)
         self.rightText.setDisabled(True)
         #
         self.checkPwdL.setDisabled(False)
@@ -957,9 +970,13 @@ class Window(QtGui.QMainWindow):
         self.buttonDecryptMode.setText('Decrypt Mode is Enabled')
         #
         self.linePasswordL.setDisabled(True)
+        self.lineRSAPathL.setDisabled(True)
+        self.buttonBrowseRSAL.setDisabled(True)
         self.leftText.setDisabled(True)
         #
         self.linePasswordR.setDisabled(False)
+        self.lineRSAPathR.setDisabled(False)
+        self.buttonBrowseRSAR.setDisabled(False)
         self.rightText.setDisabled(False)
         #
         self.checkPwdL.setDisabled(True)
@@ -1025,10 +1042,15 @@ class Window(QtGui.QMainWindow):
         #
         # If encryption mode is RSA, reveal key path.
         if enc=='RSA':
-            self.checkPwdL.setChecked(True)
-            self.checkPwdL.setText('<- Path')
+            self.lineRSAPathL.show()
+            self.lineRSAPathR.show()
+            self.buttonBrowseRSAL.show()
+            self.buttonBrowseRSAR.show()
         else:
-            self.checkPwdL.setText('<- Pwd')
+            self.lineRSAPathL.hide()
+            self.lineRSAPathR.hide()
+            self.buttonBrowseRSAL.hide()
+            self.buttonBrowseRSAR.hide()
         #
         if self.setFormatting.isChecked() and not self.showHTML.isChecked():
             # HTML string.
@@ -1078,7 +1100,7 @@ class Window(QtGui.QMainWindow):
 
             # If Json.
             if tags.startswith('"pre"'):
-                pre = 'JS'
+                pre = 'Json'
                 enc = re.search('"enc":"([0-9a-zA-Z ]{1,3})"', tags).group(1)
                 post = re.search('"pre":"([0-9a-zA-Z ]{1,3})"', tags).group(1)
                 txt = re.search('"data":\s*"(.*)"', txt, re.S).group(1)
@@ -1111,10 +1133,15 @@ class Window(QtGui.QMainWindow):
         #
         # If encryption mode is RSA, reveal key path.
         if enc=='RSA':
-            self.checkPwdR.setChecked(True)
-            self.checkPwdR.setText('<- Path')
+            self.lineRSAPathL.show()
+            self.lineRSAPathR.show()
+            self.buttonBrowseRSAL.show()
+            self.buttonBrowseRSAR.show()
         else:
-            self.checkPwdR.setText('<- Pwd')
+            self.lineRSAPathL.hide()
+            self.lineRSAPathR.hide()
+            self.buttonBrowseRSAL.hide()
+            self.buttonBrowseRSAR.hide()
         #
         if self.buttonDecryptMode.isChecked():
             self.statusBar.setStyleSheet('color:blue')

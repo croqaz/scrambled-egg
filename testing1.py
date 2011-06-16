@@ -18,10 +18,11 @@ _ENCODE_D = scrambled_egg.ENCODE_D
 PASSED = True
 
 s = scrambled_egg.ScrambledEgg()
+s.rsa_path = 'k1.txt'
 
 def RandPassword():
     # Returns a random password between 1 and 128.
-    L = random.randrange(1, 128)
+    L = random.randrange(1, 196)
     pwd = []
     for i in range(L):
         pwd.append( chr(random.randrange(48, 122)) )
@@ -58,14 +59,12 @@ for f in files:
                 # IGNORE Quopri, it's still UNSTABLE.
                 if post == 'Quopri Codec': continue
                 # IGNORE RSA.
-                if enc == 'RSA': continue
+                if enc != 'RSA': continue
                 #
                 ti = clock()
                 # Generate random password.
-                if enc == 'RSA':
-                    pwd = 'k1.txt'
-                else:
-                    pwd = RandPassword()
+                pwd = RandPassword()
+                #
                 # Encrypting without adding tags.
                 _enc = s.encrypt(txt, pre, enc, post, pwd, False)
                 # Inserting random tag.
@@ -84,7 +83,8 @@ for f in files:
                     _enc = _enc.replace('</root>', tag+'</root>')
                     _dec = s.decrypt(_enc, None, None, None, pwd)
                 elif post=='Json':
-                    _enc = _enc.replace('{', '{'+tag+', ')
+                    #_enc = _enc.replace('{', '{'+tag+', ')
+                    _enc = _enc.replace('"}', '", '+tag+'}')
                     _dec = s.decrypt(_enc, None, None, None, pwd)
                 elif len(pwd) % 2:
                     _dec = s.decrypt(tag+_enc, None, None, None, pwd)
