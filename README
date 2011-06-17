@@ -55,20 +55,25 @@
   How to use:
 ---------------
  * Graphical user interface can be accesed by opening "scrambled_egg.py" directly.
- * The text must be written in the left text-box.
+ * The text must be written in the left text-box. It's pretty intuitive.
+    All buttons have tooltips, with descriptions.
  * There is NO WAY to recover the password, if you forget it. So make sure you
     remember your passwords.
+ * RSA public/ private key must be larger than 1024 and multiple by 256.
+    Valid key formats are PEM and DER. The data is encrypted using the password
+    with RSA and Blowfish. The password should not be larger than 128 characters,
+    or it will be trimmed to 128.
  * In order to access Scrambled-Egg class from Python, all you have to do is :
-    "import scrambled_egg".
- * Tested on Windows, Ubuntu, Fedora and OpenSUSE. Before realeasing a version,
-    all tests must pass.
+    "from scrambled_egg import ScrambledEgg".
+ * Tested on Windows, Ubuntu, Fedora and OpenSUSE. Before releasing a version,
+    all tests must pass, passwords from 1 to 196 random characters.
 
 ---------------------------------
   Known Issues and Limitations:
 ---------------------------------
  * Never ever use Quopri Codec with binary files (images, music, Doc/Xls files,
     exec files). The result after decoding might differ from the original file !
- * Base32 Codec is VERY slow, so never use it for large files.
+ * Base32 Codec is VERY slow, so never use it for large files (few MBs).
  * The GUI will freeze for a looong time if you try to encrypt/ decrypt more than
     200.000-300.000 characters !
  * You must type a password in the Password Field, if you want to encrypt your files :)
@@ -79,9 +84,7 @@
  * Version 0.4 brings the following changes :
    - password enhancement. The key is derived from original password making
       the encryption much stronger, even with short passwords;
-   - added Json encoding and RSA encryption.
-      RSA key must be larger than 1024 and multiple by 256. Valid key formats
-      are PEM and DER;
+   - added Json encoding and RSA encryption;
    - a lot of GUI improvements, including drag & drop text in the left area,
       a HELP button, etc.
 

@@ -7,7 +7,7 @@ import logging as log
 import scrambled_egg
 
 #path = '/media/Disk/Projekte/p-scrambled-egg/trunk/some_files'
-path = r'd:\Projects\p-scrambled-egg\trunk\some_files'
+path = r'D:\[[]Projects[]]\Scrambled-Egg\some_files'
 files = glob.glob(path+'/*.*')
 
 _SCRAMBLE_D = scrambled_egg.SCRAMBLE_D
@@ -21,11 +21,12 @@ s = scrambled_egg.ScrambledEgg()
 s.rsa_path = 'k1.txt'
 
 def RandPassword():
-    # Returns a random password between 1 and 128.
+    # Returns a random password between 1 and 196.
     L = random.randrange(1, 196)
     pwd = []
     for i in range(L):
-        pwd.append( chr(random.randrange(48, 122)) )
+        # From 'space' to '~'.
+        pwd.append( chr(random.randrange(32, 126)) )
     pwd = ''.join(pwd)
     L = len(pwd)
     return pwd
@@ -58,8 +59,6 @@ for f in files:
                 #
                 # IGNORE Quopri, it's still UNSTABLE.
                 if post == 'Quopri Codec': continue
-                # IGNORE RSA.
-                if enc != 'RSA': continue
                 #
                 ti = clock()
                 # Generate random password.

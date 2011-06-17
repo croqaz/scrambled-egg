@@ -52,7 +52,7 @@ NO_TAGS = re.compile(
 #
 # These numbers are used when (re)creating PNG images.
 SCRAMBLE_NR = {'None':'1', 'ROT13':'2', 'ZLIB':'3', 'BZ2':'4'}
-ENCRYPT_NR = {'AES':'1', 'ARC2':'2', 'CAST':'3', 'Blowfish':'5', 'DES3':'4', 'None':'9'}
+ENCRYPT_NR = {'AES':'1', 'ARC2':'2', 'CAST':'3', 'Blowfish':'5', 'DES3':'4', 'RSA':'6', 'None':'9'}
 ENCODE_NR = {'Base64 Codec':'4', 'Base32 Codec':'2', 'HEX Codec':'1', 'Quopri Codec':'9', 'String Escape':'6', 'UU Codec':'8', 'XML':'7'}
 #
 
@@ -99,6 +99,14 @@ class ScrambledEgg():
         DES3 accepts maxim 24 characters.
         '''
         #
+        try:
+            pwd = pwd.encode('utf_8')
+        except:
+            try:
+                pwd = pwd.encode('latin')
+            except:
+                pass
+
         if enc == 'AES' or enc == ENC['AES']:
             key_size = 32
 
@@ -115,11 +123,14 @@ class ScrambledEgg():
             key_size = 24
 
         elif enc == 'RSA' and self.rsa_path:
+            key_size = 56
             # Read the public/ private key from file, encrypt password and return.
             rsa_key = open(self.rsa_path, 'rb').read()
             o = RSA.importKey(rsa_key)
-            enc_pwd = o.encrypt(pwd[:128], 0)[0]
-            return enc_pwd[-56:]
+            # RSA text is max 128 characters.
+            rsa_pwd = pwd[:128]
+            pwd = o.encrypt(rsa_pwd, 0)[0]
+            del o, rsa_key, rsa_pwd
 
         else:
             raise Exception('Fix password: Invalid encryption mode "%s" !' % enc)
@@ -131,7 +142,9 @@ class ScrambledEgg():
         key = ''
         md_hash = md5(pwd)
 
-        # Scramble password many times.
+        # Scramble the password many times.
+        # Cannot use random salt, because the same pass must be recreated,
+        # for decryption.
         for i in range(666):
             key += md_hash.digest()
             md_hash.update(key)
@@ -885,6 +898,9 @@ class Window(QtGui.QMainWindow):
             else self.linePasswordR.setEchoMode(QtGui.QLineEdit.Password))
         self.buttonDecryptMode.clicked.connect(self.onDecryptMode)
         #
+        self.buttonBrowseRSAL.clicked.connect(self.browseRSAkey)
+        self.buttonBrowseRSAR.clicked.connect(self.browseRSAkey)
+        #
         self.preProcess.currentIndexChanged.connect(self.onLeftTextChanged)
         self.comboCrypt.currentIndexChanged.connect(self.onLeftTextChanged)
         self.postProcess.currentIndexChanged.connect(self.onLeftTextChanged)
@@ -933,6 +949,18 @@ class Window(QtGui.QMainWindow):
             # List of dragged files.
             for url in uris:
                 print urllib.urlopen(url)
+        #
+
+    def browseRSAkey(self):
+        #
+        f = QtGui.QFileDialog()
+        path = f.getOpenFileName(self, 'Path to RSA public or private key', os.getcwd(), 'All files (*.*)')
+        if not path:
+            return
+        #
+        self.SE.rsa_path = path
+        self.lineRSAPathL.setText(path)
+        self.lineRSAPathR.setText(path)
         #
 
     def onCryptMode(self):
@@ -1249,7 +1277,7 @@ class Window(QtGui.QMainWindow):
             '<font color="blue"><b>Step 1</b></font> can compress your data using <b>ZLIB</b>, or <b>BZ2</b>. This step is optional.<br>'
             '<font color="blue"><b>Step 2</b></font> is the real encryption, for example with <b>AES</b>, or <b>Blowfish</b>. '
             'The password is used only in this step. '
-            'For <b>RSA</b> encryption, instead of the password, you have to type the path to the public or private RSA key.<br>'
+            'For <b>RSA</b> encryption, along with the password, you have to type the path to the public or private RSA key.<br>'
             '<font color="blue"><b>Step 3</b></font> will encode your data. This step is required, the rest are optional. '
             'There are a lot of encodings available, for example <b>Base64</b>, or <b>HEX</b>.<br><br>'
             'This FREE program is distributed in the hope that it will be useful.<br><br>'

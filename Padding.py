@@ -195,19 +195,6 @@ def removeRandomLenPadding(str, blocksize=AES_blocksize):
   assert pad_len < len(str), 'padding error'
   return str[:-pad_len]
 
-def TestPadding(str, blocksize=AES_blocksize):
-    'Test adding and removing padding'
-    from hashlib import sha1
-    str_hash = sha1(str).hexdigest()
-    str = appendPadding(str)
-    str = removePadding(str)
-    if sha1(str).hexdigest() == str_hash:
-        print 'ok'
-        return True
-    else:
-        print 'Failed for str:',str
-        return False
-
 # Padding modes
 MODES ={
         (0,'CMS')     : 'Cryptographic Message Syntax (CMS as defined in RFC 5652, PKCS#5, PKCS#7 and RFC 1423 PEM): Pad with bytes all of the same value as the number of padding bytes',

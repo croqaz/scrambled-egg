@@ -6,8 +6,8 @@ from Crypto.Hash import MD5
 import logging as log
 import scrambled_egg
 
-path = '/media/Disk/Projekte/p-scrambled-egg/trunk/some_files'
-#path = r'd:\Projects\p-scrambled-egg\trunk\some_files'
+#path = '/media/Disk/Projekte/p-scrambled-egg/trunk/some_files'
+path = r'D:\[[]Projects[]]\Scrambled-Egg\some_files'
 files = glob.glob(path+'/*.*')
 
 _SCRAMBLE_D = scrambled_egg.SCRAMBLE_D
@@ -18,6 +18,7 @@ _ENCODE_D = {'Base64 Codec':'64', 'Base32 Codec':'32', 'HEX Codec':'H'}
 PASSED = True
 
 s = scrambled_egg.ScrambledEgg()
+s.rsa_path = 'k1.txt'
 
 def RandPassword():
     # Returns a random password between 1 and 128.
