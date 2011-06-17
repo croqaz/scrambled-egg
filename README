@@ -18,10 +18,11 @@
   About:
 ----------
 
- - easily encrypt your data using AES, ARC2, Blowfish, CAST, DES3 or RSA then encode the result
-    in a printable form, using Base64, Base32, HEX, Quopri, string escape, UU, XML or Json;
- - the resulted string can be sent on e-mail as text, saved as XML, Json or UU, or can be
-    transformed into a little PNG image;
+ - easily encrypt your data using AES, ARC2, Blowfish, CAST, DES3 or RSA Public-key
+    then encode the result in a printable form, using Base64, Base32, HEX, Quopri,
+    string escape, UU, XML or Json;
+ - the resulted string can be sent on e-mail as text, saved as XML, Json or UU,
+    or can be transformed into a little PNG image;
  - website : http://scrambled-egg.googlecode.com
 
 ------------
@@ -29,17 +30,18 @@
 ------------
   Scrambled-Egg is copyright © 2010-2011, Cristi Constantin. All rights reserved.
 
-  This program is free software: you can redistribute it and/or modify it under the terms
-  of the GNU General Public License as published by the Free Software Foundation, either
-  version 3 of the License, or (at your option) any later version.
+  This program is free software: you can redistribute it and/or modify it under
+  the terms of the GNU General Public License as published by the Free Software
+  Foundation, either version 3 of the License, or (at your option) any later version.
 
   If you redistribute this software, neither the name of "Scrambled-Egg"
   nor the names of its contributors may be used to endorse or promote
   products derived from this software without specific prior written
   permission.
 
-  This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-  without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  This program is distributed in the hope that it will be useful, but WITHOUT ANY
+  WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+  A PARTICULAR PURPOSE.
   See the GNU General Public License (GPL) for more details.
 
 -----------------
@@ -54,43 +56,50 @@
 ---------------
  * Graphical user interface can be accesed by opening "scrambled_egg.py" directly.
  * The text must be written in the left text-box.
- * In order to access Scrambled-Egg class, all you have to do is : "import scrambled_egg".
- * Tested on Windows, Ubuntu and OpenSUSE.
+ * There is NO WAY to recover the password, if you forget it. So make sure you
+    remember your passwords.
+ * In order to access Scrambled-Egg class from Python, all you have to do is :
+    "import scrambled_egg".
+ * Tested on Windows, Ubuntu, Fedora and OpenSUSE. Before realeasing a version,
+    all tests must pass.
 
 ---------------------------------
   Known Issues and Limitations:
 ---------------------------------
- * Don't use Quopri Codec with binary files (images, music, Doc/Xls files, executables).
-    The result after decoding might be differend from the original file !!
+ * Never ever use Quopri Codec with binary files (images, music, Doc/Xls files,
+    exec files). The result after decoding might differ from the original file !
  * Base32 Codec is VERY slow, so never use it for large files.
- * RSA encryption is VERY slow, so never use it for large files.
-    RSA is very strong encryption, you should only use it for small pieces of text.
  * The GUI will freeze for a looong time if you try to encrypt/ decrypt more than
     200.000-300.000 characters !
+ * You must type a password in the Password Field, if you want to encrypt your files :)
 
 ---------------
   What's new:
 ---------------
  * Version 0.4 brings the following changes :
-    - added RSA encryption and Json encoding.
-      RSA key must be larger than 1024 and multiple by 256. RSA import formats are PEM and DER;
-    - password enhancement. The key is derived from original password making the encryption stronger;
-    - drag & drop your text in the left area.
+   - password enhancement. The key is derived from original password making
+      the encryption much stronger, even with short passwords;
+   - added Json encoding and RSA encryption.
+      RSA key must be larger than 1024 and multiple by 256. Valid key formats
+      are PEM and DER;
+   - a lot of GUI improvements, including drag & drop text in the left area,
+      a HELP button, etc.
 
  * Version 0.3 brings the following changes :
-    - better encryption. All modes use CBC;
-    - images resulted from HEX codec are about 25-33% smaller than images resulted from Base64/32;
-    - checkbox to show HTML;
-    - better testing. The program is stable. Tested on hundreds of files
+   - better encryption. All modes use CBC;
+   - images resulted from HEX codec are about 25-33% smaller than images
+      resulted from Base64/32;
+   - checkbox to show HTML;
+   - better testing. The program is stable. Tested on hundreds of files
       (images, music, office documents, executables);
-    - the GUI looks nicer.
+   - the GUI looks nicer.
 
  * Version 0.2 brings quite some changes :
-    - a lot of bug fixes;
-    - stability obtained after MASSIVE testing;
-    - all operations are faster;
-    - added ARC2 encryption, Base32 and XML encodings;
-    - import and export operations directly from GUI;
-    - checkbox to show and hide pre/enc/post tags in resulted text.
+   - a lot of bug fixes;
+   - stability obtained after MASSIVE testing;
+   - all operations are faster;
+   - added ARC2 encryption, Base32 and XML encodings;
+   - import and export operations directly from GUI;
+   - checkbox to show and hide pre/enc/post tags in resulted text.
 
 Eof()

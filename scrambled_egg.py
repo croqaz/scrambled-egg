@@ -15,8 +15,9 @@ import base64
 import json
 import bz2, zlib
 from collections import OrderedDict
+from hashlib import md5
+from Padding import appendPadding, removePadding
 
-from Crypto.Hash import MD5
 from Crypto.Cipher import AES
 from Crypto.Cipher import ARC2
 from Crypto.Cipher import CAST
@@ -64,11 +65,10 @@ class ScrambledEgg():
 
     def __init__(self):
         self.error = '' # Error string.
-        self.fillChar = '\x01' # This is probably the best filling character.
-        self.rsaFillChar = unichr(2662).encode('utf')
         self.pre = ''   # Current operations, in order.
         self.enc = ''
         self.post = ''
+        self.rsaFillChar = unichr(2662).encode('utf_8')
         self.rsa_path = ''
 
     def __error(self, step, pre, enc, post, field='R'):
@@ -129,7 +129,7 @@ class ScrambledEgg():
             return key_size * 'X'
 
         key = ''
-        md_hash = MD5.new(pwd)
+        md_hash = md5(pwd)
 
         # Scramble password many times.
         for i in range(666):
@@ -161,8 +161,7 @@ class ScrambledEgg():
             return
         #
         pwd = self._fix_password(pwd, enc)
-        L = len(txt)
-        txt += self.fillChar * ( (((L/16)+1)*16) - L )
+        txt = appendPadding(txt, blocksize=16)
         #
         # Encryption operation.
         if enc == 'AES':
@@ -328,12 +327,12 @@ class ScrambledEgg():
             # Using Blowfish decryption for RSA.
             o = Blowfish.new(pwd, mode=3)
         elif not enc or enc == 'None':
-            txt = txt.rstrip(self.fillChar)
+            txt = removePadding(txt, 16)
         else:
             raise Exception('Invalid decrypt "%s" !' % enc)
         #
         if enc != 'None':
-            try: txt = o.decrypt(txt).rstrip(self.fillChar)
+            try: txt = removePadding(o.decrypt(txt), 16)
             except: self.__error(2, pre, enc, post) ; return
         #
         # Un-scramble operation.
