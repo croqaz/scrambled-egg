@@ -337,7 +337,7 @@ class ScrambledEgg():
             except: self.__error(2, pre, enc, post) ; return
         #
         # Un-scramble operation.
-        if not post or post == 'None':
+        if not post or post == 'N' or post == 'None':
             final = txt
         elif post == 'ZLIB' or post == SCRAMBLE_D['ZLIB']:
             try: final = zlib.decompress(txt)
@@ -748,7 +748,7 @@ class Window(QtGui.QMainWindow):
 
         self.layout.addWidget(self.loadFile, 21, 6, 1, 1)
         self.layout.addWidget(self.saveFile, 21, 7, 1, 1)
-        self.layout.addWidget(self.helpButton, 21, 10, 1, 1)
+        self.layout.addWidget(self.helpButton, 21, 8, 1, 1)
 
         self.layout.addWidget(self.linePasswordL, 3, 1, 1, 4)
         self.layout.addWidget(self.checkPwdL, 3, 5, 1, 1)
@@ -782,7 +782,6 @@ class Window(QtGui.QMainWindow):
         self.buttonDecryptMode.setToolTip('Switch to Decryption mode')
         self.buttonDecryptMode.setStyleSheet(STYLE_BUTTON)
         self.helpButton.setStyleSheet(STYLE_BUTTON)
-        self.helpButton.setMaximumWidth(60)
 
         # Some styles.
         self.loadFile.setStyleSheet(STYLE_BUTTON)
@@ -1029,16 +1028,11 @@ class Window(QtGui.QMainWindow):
         #
         if not self.buttonCryptMode.isChecked():
             return
-        if not self.leftText.toPlainText():
-            self.rightText.clear()
-            return
         #
         # Save all pre/enc/post operations.
         pre = self.preProcess.currentText()
         enc = self.comboCrypt.currentText()
         post = self.postProcess.currentText()
-        pwd = self.linePasswordL.text()
-        tags = not self.setTags.isChecked()
         #
         # If encryption mode is RSA, reveal key path.
         if enc=='RSA':
@@ -1051,6 +1045,13 @@ class Window(QtGui.QMainWindow):
             self.lineRSAPathR.hide()
             self.buttonBrowseRSAL.hide()
             self.buttonBrowseRSAR.hide()
+        #
+        if not self.leftText.toPlainText():
+            self.rightText.clear()
+            return
+        #
+        pwd = self.linePasswordL.text()
+        tags = not self.setTags.isChecked()
         #
         if self.setFormatting.isChecked() and not self.showHTML.isChecked():
             # HTML string.
@@ -1089,7 +1090,7 @@ class Window(QtGui.QMainWindow):
 
     def onRightTextChanged(self):
         #
-        if not self.buttonDecryptMode.isChecked() or not self.rightText.toPlainText():
+        if not self.buttonDecryptMode.isChecked():
             return
         #
         txt = self.rightText.toPlainText()
@@ -1103,13 +1104,11 @@ class Window(QtGui.QMainWindow):
                 pre = 'Json'
                 enc = re.search('"enc":"([0-9a-zA-Z ]{1,3})"', tags).group(1)
                 post = re.search('"pre":"([0-9a-zA-Z ]{1,3})"', tags).group(1)
-                txt = re.search('"data":\s*"(.*)"', txt, re.S).group(1)
             # If XML.
             elif tags.startswith('<pre>'):
                 pre = 'XML'
                 enc = re.search('<enc>([0-9a-zA-Z ]{1,3})</enc>', tags).group(1)
                 post = re.search('<pre>([0-9a-zA-Z ]{1,3})</pre>', tags).group(1)
-                txt = re.search('<data>(.*)</data>', txt, re.S).group(1)
 
             # Identify the rest.
             if not pre:
@@ -1142,6 +1141,10 @@ class Window(QtGui.QMainWindow):
             self.lineRSAPathR.hide()
             self.buttonBrowseRSAL.hide()
             self.buttonBrowseRSAR.hide()
+        #
+        if not txt:
+            self.leftText.clear()
+            return
         #
         if self.buttonDecryptMode.isChecked():
             self.statusBar.setStyleSheet('color:blue')

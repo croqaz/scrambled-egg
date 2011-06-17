@@ -6,8 +6,8 @@ from Crypto.Hash import MD5
 import logging as log
 import scrambled_egg
 
-path = '/media/Disk/Projekte/p-scrambled-egg/trunk/some_files'
-#path = r'd:\Projects\p-scrambled-egg\trunk\some_files'
+#path = '/media/Disk/Projekte/p-scrambled-egg/trunk/some_files'
+path = r'd:\Projects\p-scrambled-egg\trunk\some_files'
 files = glob.glob(path+'/*.*')
 
 _SCRAMBLE_D = scrambled_egg.SCRAMBLE_D
