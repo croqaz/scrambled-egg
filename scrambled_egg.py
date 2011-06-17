@@ -13,10 +13,12 @@ import urllib
 import binascii as ba
 import base64
 import json
+import hashlib
 import bz2, zlib
+
 from collections import OrderedDict
-from hashlib import md5
 from Padding import appendPadding, removePadding
+from pbkdf2 import PBKDF2
 
 from Crypto.Cipher import AES
 from Crypto.Cipher import ARC2
@@ -99,13 +101,8 @@ class ScrambledEgg():
         DES3 accepts maxim 24 characters.
         '''
         #
-        try:
-            pwd = pwd.encode('utf_8')
-        except:
-            try:
-                pwd = pwd.encode('latin')
-            except:
-                pass
+        # Accepting ANY type of password.
+        pwd = ba.b2a_base64(pwd)
 
         if enc == 'AES' or enc == ENC['AES']:
             key_size = 32
@@ -132,6 +129,9 @@ class ScrambledEgg():
             pwd = o.encrypt(rsa_pwd, 0)[0]
             del o, rsa_key, rsa_pwd
 
+        elif not enc or enc == 'None':
+            return pwd
+
         else:
             raise Exception('Fix password: Invalid encryption mode "%s" !' % enc)
 
@@ -139,18 +139,12 @@ class ScrambledEgg():
             # Only for NULL passwords.
             return key_size * 'X'
 
-        key = ''
-        md_hash = md5(pwd)
-
         # Scramble the password many times.
-        # Cannot use random salt, because the same pass must be recreated,
-        # for decryption.
-        for i in range(666):
-            key += md_hash.digest()
-            md_hash.update(key)
+        # Can't use random salt, 'cose the same pass must be recreated for decryption.
+        hash_key = PBKDF2(passphrase=pwd, salt='scregg', iterations=1024)
 
-        # The password for encryption.
-        return key[-key_size:]
+        # The password for encryption/ decryption.
+        return hash_key.read(key_size)
         #
 
     def encrypt(self, txt, pre, enc, post, pwd, tags=True):
@@ -196,7 +190,7 @@ class ScrambledEgg():
             # Using Blowfish encryption for RSA.
             o = Blowfish.new(pwd, mode=3)
             encrypted = o.encrypt(txt)
-        elif enc == 'None':
+        elif not enc or enc == 'None':
             encrypted = txt
         else:
             raise Exception('Invalid encryption mode "%s" !' % enc)
