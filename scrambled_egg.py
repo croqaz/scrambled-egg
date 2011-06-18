@@ -34,6 +34,11 @@ sip.setapi('QVariant', 2)
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 
+# TODO for next versions:
+# File attachments in encryption, like attachments in an email.
+# Drag and drop files in the GUI.
+# Command line to encrypt/ decrypt.
+# Daemon to watch for files in folders and encrypt them.
 
 #
 ROT = string.maketrans('nopqrstuvwxyzabcdefghijklmNOPQRSTUVWXYZABCDEFGHIJKLM', 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
@@ -144,6 +149,7 @@ class ScrambledEgg():
         hash_key = PBKDF2(passphrase=pwd, salt='scregg', iterations=1024)
 
         # The password for encryption/ decryption.
+        # This is very strong, binary data!
         return hash_key.read(key_size)
         #
 
@@ -228,14 +234,14 @@ class ScrambledEgg():
                 final = encrypted.encode('uu')
         elif post == 'Json':
             if tags:
-                # Format : {"pre": "XXX", "enc": "YYY", "post": "ZZZ", "data": "Blah blah blah"}
+                # Format : {"pre": "AAA", "enc": "BBB", "post": "CCC", "data": "Blah blah blah"}
                 final = '{"pre": "%s", "enc": "%s", "post": "%s", "data": "%s"}' % \
                     (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post], ba.b2a_base64(encrypted).strip())
             else:
                 final = json.dumps({'data':ba.b2a_base64(encrypted).strip()})
         elif post == 'XML':
             if tags:
-                # Format : <root><pre>XXX</pre> <enc>YYY</enc> <post>ZZZ</post> <data>Blah blah blah</data></root>
+                # Format : <root><pre>AAA</pre> <enc>BBB</enc> <post>CCC</post> <data>Blah blah blah</data></root>
                 final = '<root>\n<pre>%s</pre><enc>%s</enc><post>%s</post>\n<data>%s</data>\n</root>' % \
                     (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post], ba.b2a_base64(encrypted).strip())
             else:
@@ -249,7 +255,6 @@ class ScrambledEgg():
     def decrypt(self, txt, pre, enc, post, pwd):
         #
         # Trying to identify and/or delete pre/enc/post tags.
-        #
         try:
             re_groups = re.search(NO_TAGS, txt).groups()
             tags = findg(re_groups)

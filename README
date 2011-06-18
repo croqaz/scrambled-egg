@@ -66,7 +66,7 @@
   * In order to access Scrambled-Egg class from Python, all you have to do is :
     "from scrambled_egg import ScrambledEgg".
   * Tested on Windows, Ubuntu, Fedora and OpenSUSE. Before releasing a version,
-    all tests must pass, passwords from 1 to 196 random characters.
+    all tests must pass, random passwords from 1 to 196 characters.
 
 ---------------------------------
   Known Issues and Limitations:
@@ -82,11 +82,13 @@
   What's new:
 ---------------
  = Version 0.4 brings the following changes :=
-  * password enhancement. The key is derived from original password making
-    the encryption much stronger, even with short passwords;
+  * password enhancement. The key is derived from original password (using PBKDF2)
+    making the encryption much stronger, even with short passwords;
   * added Json encoding and RSA encryption;
-  * a lot of GUI improvements, including drag & drop text in the left area,
-    a HELP button, etc.
+  * few bug fixes and a lot of GUI improvements, including drag & drop text
+    in the left area, a HELP button, etc;
+  * There are a lot of improvements, but backwards incompatible, that means
+    you cannot decrypt text encrypted with Scrambled-Egg version 0.3.
 
  = Version 0.3 brings the following changes :=
   * better encryption. All modes use CBC;
@@ -106,3 +108,4 @@
   * checkbox to show and hide pre/enc/post tags in resulted text.
 
 Eof()
+
