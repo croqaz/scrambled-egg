@@ -47,62 +47,62 @@
 -----------------
   Requirements:
 -----------------
- * Python 2.6/2.7. Scrambled-Egg is written in Python 2.7. (www.python.org)
- * Python Crypto. Data is crypted in AES, Blowfish, DES3, etc. (www.pycrypto.org)
- * PyQt4. Graphical user interface and PNG image with Qt. (www.riverbankcomputing.co.uk/software/pyqt)
+  * Python 2.6/2.7. Scrambled-Egg is written in Python 2.7. (www.python.org)
+  * Python Crypto. Data is crypted in AES, Blowfish, DES3, etc. (www.pycrypto.org)
+  * PyQt4. Graphical user interface and PNG image with Qt. (www.riverbankcomputing.co.uk/software/pyqt)
 
 ---------------
   How to use:
 ---------------
- * Graphical user interface can be accesed by opening "scrambled_egg.py" directly.
- * The text must be written in the left text-box. It's pretty intuitive.
+  * Graphical user interface can be accesed by opening "scrambled_egg.py" directly.
+  * The text must be written in the left text-box. It's pretty intuitive.
     All buttons have tooltips, with descriptions.
- * There is NO WAY to recover the password, if you forget it. So make sure you
+  * There is NO WAY to recover the password, if you forget it. So make sure you
     remember your passwords.
- * RSA public/ private key must be larger than 1024 and multiple by 256.
+  * RSA public/ private key must be larger than 1024 and multiple by 256.
     Valid key formats are PEM and DER. The data is encrypted using the password
     with RSA and Blowfish. The password should not be larger than 128 characters,
     or it will be trimmed to 128.
- * In order to access Scrambled-Egg class from Python, all you have to do is :
+  * In order to access Scrambled-Egg class from Python, all you have to do is :
     "from scrambled_egg import ScrambledEgg".
- * Tested on Windows, Ubuntu, Fedora and OpenSUSE. Before releasing a version,
+  * Tested on Windows, Ubuntu, Fedora and OpenSUSE. Before releasing a version,
     all tests must pass, passwords from 1 to 196 random characters.
 
 ---------------------------------
   Known Issues and Limitations:
 ---------------------------------
- * Never ever use Quopri Codec with binary files (images, music, Doc/Xls files,
+  * Never ever use Quopri Codec with binary files (images, music, Doc/Xls files,
     exec files). The result after decoding might differ from the original file !
- * Base32 Codec is VERY slow, so never use it for large files (few MBs).
- * The GUI will freeze for a looong time if you try to encrypt/ decrypt more than
+  * Base32 Codec is VERY slow, so never use it for large files (few MBs).
+  * The GUI will freeze for a looong time if you try to encrypt/ decrypt more than
     200.000-300.000 characters !
- * You must type a password in the Password Field, if you want to encrypt your files :)
+  * You must type a password in the Password Field, if you want to encrypt your files :)
 
 ---------------
   What's new:
 ---------------
- * Version 0.4 brings the following changes :
-   - password enhancement. The key is derived from original password making
-      the encryption much stronger, even with short passwords;
-   - added Json encoding and RSA encryption;
-   - a lot of GUI improvements, including drag & drop text in the left area,
-      a HELP button, etc.
+ = Version 0.4 brings the following changes :=
+  * password enhancement. The key is derived from original password making
+    the encryption much stronger, even with short passwords;
+  * added Json encoding and RSA encryption;
+  * a lot of GUI improvements, including drag & drop text in the left area,
+    a HELP button, etc.
 
- * Version 0.3 brings the following changes :
-   - better encryption. All modes use CBC;
-   - images resulted from HEX codec are about 25-33% smaller than images
-      resulted from Base64/32;
-   - checkbox to show HTML;
-   - better testing. The program is stable. Tested on hundreds of files
-      (images, music, office documents, executables);
-   - the GUI looks nicer.
+ = Version 0.3 brings the following changes :=
+  * better encryption. All modes use CBC;
+  * images resulted from HEX codec are about 25-33% smaller than images
+    resulted from Base64/32;
+  * checkbox to show HTML;
+  * better testing. The program is stable. Tested on hundreds of files
+    (images, music, office documents, executables);
+  * the GUI looks nicer.
 
- * Version 0.2 brings quite some changes :
-   - a lot of bug fixes;
-   - stability obtained after MASSIVE testing;
-   - all operations are faster;
-   - added ARC2 encryption, Base32 and XML encodings;
-   - import and export operations directly from GUI;
-   - checkbox to show and hide pre/enc/post tags in resulted text.
+ = Version 0.2 brings quite some changes :=
+  * a lot of bug fixes;
+  * stability obtained after MASSIVE testing;
+  * all operations are faster;
+  * added ARC2 encryption, Base32 and XML encodings;
+  * import and export operations directly from GUI;
+  * checkbox to show and hide pre/enc/post tags in resulted text.
 
 Eof()
