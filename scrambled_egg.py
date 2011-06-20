@@ -817,17 +817,19 @@ class Window(QtGui.QMainWindow):
 
         # RSA Path.
         self.lineRSAPathL.setStyleSheet(STYLE_LINEEDIT)
+        self.lineRSAPathL.setToolTip('RSA Encryption requires both a password and the path to a public/ private RSA key')
         self.lineRSAPathL.hide()
         self.lineRSAPathR.setStyleSheet(STYLE_LINEEDIT)
+        self.lineRSAPathR.setToolTip('RSA Decryption requires both a password and the path to a public/ private RSA key')
         self.lineRSAPathR.hide()
         self.lineRSAPathR.setDisabled(True)
 
         self.buttonBrowseRSAL.setStyleSheet(STYLE_BUTTON)
-        self.buttonBrowseRSAL.setMaximumWidth(60)
         self.buttonBrowseRSAL.hide()
+        self.buttonBrowseRSAL.setMaximumWidth(60)
         self.buttonBrowseRSAR.setStyleSheet(STYLE_BUTTON)
-        self.buttonBrowseRSAR.setMaximumWidth(60)
         self.buttonBrowseRSAR.hide()
+        self.buttonBrowseRSAR.setMaximumWidth(60)
         self.buttonBrowseRSAR.setDisabled(True)
 
         # Formatted text.
