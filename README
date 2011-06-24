@@ -50,6 +50,9 @@
   * Python 2.6/2.7. Scrambled-Egg is written in Python 2.7. (www.python.org)
   * Python Crypto. Data is crypted in AES, Blowfish, DES3, etc. (www.pycrypto.org)
   * PyQt4. Graphical user interface and PNG image with Qt. (www.riverbankcomputing.co.uk/software/pyqt)
+  * Not required, but very important to mention:
+    * Padding. Author: Peio Popov.
+    * PBKDF2. Author: Dwayne C. Litzenberger.
 
 ---------------
   How to use:

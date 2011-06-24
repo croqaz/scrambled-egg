@@ -658,6 +658,14 @@ class ScrambledEgg():
         #
 
 
+STYLE_MAIN = '''
+QMainWindow {background:transparent}
+'''
+
+STYLE_CONTAINER = '''
+#Container {background:white url(grid.png); border:2px solid black; border-radius:10px;}
+'''
+
 STYLE_BUTTON = '''
 QPushButton {color:#2E2633; background-color:#E1EDB9;}
 QPushButton:checked {color:#555152; background-color:#F3EFEE;}
@@ -691,6 +699,28 @@ QComboBox QAbstractItemView {selection-background-color:#E1EDB9;}
 '''
 
 
+class Container(QtGui.QWidget):
+
+    def __init__(self, parent):
+        super(Container, self).__init__(parent)
+        self.mMoving = False
+        self.setMouseTracking(False)
+        self.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum, QtGui.QSizePolicy.Maximum))
+
+    def mousePressEvent(self, event):
+        if(event.button() == QtCore.Qt.LeftButton):
+            self.mMoving = True
+            self.mOffset = event.pos()
+
+    def mouseMoveEvent(self, event):
+        if(self.mMoving):
+            self.parentWidget().move(event.globalPos() - self.mOffset)
+
+    def mouseReleaseEvent(self, event):
+        if(event.button() == QtCore.Qt.LeftButton):
+            self.mMoving = False
+
+
 class Window(QtGui.QMainWindow):
 
     def __init__(self):
@@ -698,18 +728,26 @@ class Window(QtGui.QMainWindow):
         Init function.
         '''
         super(Window, self).__init__()
+        QtGui.QApplication.setStyle(QtGui.QStyleFactory.create('CleanLooks'))
+        QtGui.QApplication.setPalette(QtGui.QApplication.style().standardPalette())
+
         self.resize(800, 400)
         self.setWindowTitle('Scrambled Egg :: Live Crypt')
         self.setWindowIcon(QtGui.QIcon(os.getcwd() + '/icon.ico'))
-        QtGui.QApplication.setStyle(QtGui.QStyleFactory.create('CleanLooks'))
-        QtGui.QApplication.setPalette(QtGui.QApplication.style().standardPalette())
+        self.setWindowFlags(QtCore.Qt.FramelessWindowHint)
+        self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+        self.setStyleSheet(STYLE_MAIN)
+        self.setWindowOpacity(0.9)
         self.setAcceptDrops(True)
         self.SE = ScrambledEgg()
 
-        self.centralWidget = QtGui.QWidget(self) # Central Widget.
+        self.centralWidget = Container(self) # Central Widget.
         self.setCentralWidget(self.centralWidget)
+        self.container = QtGui.QWidget(self.centralWidget) # Container.
+        self.container.setObjectName('Container')
+        self.container.setStyleSheet(STYLE_CONTAINER)
 
-        self.statusBar = QtGui.QStatusBar(self)  # Status Bar.
+        self.statusBar = QtGui.QStatusBar(self) # Status Bar.
         self.setStatusBar(self.statusBar)
         self.layout = QtGui.QGridLayout(self.centralWidget) # Main Layout.
         self.centralWidget.setLayout(self.layout)
@@ -744,6 +782,7 @@ class Window(QtGui.QMainWindow):
         self.saveFile = QtGui.QPushButton('Export', self.centralWidget) # Right side.
         self.helpButton = QtGui.QPushButton('Help !', self.centralWidget) # Right side.
 
+        self.layout.addWidget(self.container, 0, 0, 23, 12)
         self.layout.addWidget(self.buttonCryptMode, 1, 1, 1, 5)
         self.layout.addWidget(self.buttonDecryptMode, 1, 6, 1, 5)
 
@@ -773,8 +812,8 @@ class Window(QtGui.QMainWindow):
 
         self.layout.addWidget(self.nrLettersL, 21, 5, 1, 1)
         self.layout.addWidget(self.nrLettersR, 21, 10, 1, 1)
-        self.layout.addWidget(self.leftText, 5, 1, 10, 5)
-        self.layout.addWidget(self.rightText, 5, 6, 10, 5)
+        self.layout.addWidget(self.leftText, 4, 1, 17, 5)
+        self.layout.addWidget(self.rightText, 4, 6, 17, 5)
 
         self.__setup() # Prepair all components!
         self.__connect() # Connect all components!
@@ -799,6 +838,8 @@ class Window(QtGui.QMainWindow):
         self.saveFile.setStyleSheet(STYLE_BUTTON)
         self.leftText.setStyleSheet(STYLE_TEXTEDIT)
         self.rightText.setStyleSheet(STYLE_TEXTEDIT)
+        self.leftText.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding))
+        self.rightText.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding))
 
         # Password fields.
         self.linePasswordL.setEchoMode(QtGui.QLineEdit.Password)
