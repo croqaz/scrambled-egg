@@ -663,7 +663,7 @@ QMainWindow {background:transparent}
 '''
 
 STYLE_CONTAINER = '''
-#Container {background:white url(grid.png); border:2px solid black; border-radius:10px;}
+#Container {background:white url(hash.gif); border:3px solid grey; border-radius:11px;}
 '''
 
 STYLE_BUTTON = '''
@@ -732,6 +732,8 @@ class Window(QtGui.QMainWindow):
         QtGui.QApplication.setPalette(QtGui.QApplication.style().standardPalette())
 
         self.resize(800, 400)
+        self.setMaximumWidth(950)
+        self.setMaximumHeight(600)
         self.setWindowTitle('Scrambled Egg :: Live Crypt')
         self.setWindowIcon(QtGui.QIcon(os.getcwd() + '/icon.ico'))
         self.setWindowFlags(QtCore.Qt.FramelessWindowHint)
@@ -747,8 +749,7 @@ class Window(QtGui.QMainWindow):
         self.container.setObjectName('Container')
         self.container.setStyleSheet(STYLE_CONTAINER)
 
-        self.statusBar = QtGui.QStatusBar(self) # Status Bar.
-        self.setStatusBar(self.statusBar)
+        self.textBar = QtGui.QLabel(self) # Top text bar.
         self.layout = QtGui.QGridLayout(self.centralWidget) # Main Layout.
         self.centralWidget.setLayout(self.layout)
 
@@ -782,38 +783,48 @@ class Window(QtGui.QMainWindow):
         self.saveFile = QtGui.QPushButton('Export', self.centralWidget) # Right side.
         self.helpButton = QtGui.QPushButton('Help !', self.centralWidget) # Right side.
 
-        self.layout.addWidget(self.container, 0, 0, 23, 12)
-        self.layout.addWidget(self.buttonCryptMode, 1, 1, 1, 5)
-        self.layout.addWidget(self.buttonDecryptMode, 1, 6, 1, 5)
+        self.minButton = QtGui.QPushButton('_', self.centralWidget)
+        self.closeButton = QtGui.QPushButton('x', self.centralWidget)
 
-        self.layout.addWidget(self.preProcess, 2, 1, 1, 1)
-        self.layout.addWidget(self.comboCrypt, 2, 2, 1, 1)
-        self.layout.addWidget(self.postProcess, 2, 3, 1, 1)
-        self.layout.addWidget(self.preDecrypt, 2, 6, 1, 1)
-        self.layout.addWidget(self.comboDecrypt, 2, 7, 1, 1)
-        self.layout.addWidget(self.postDecrypt, 2, 8, 1, 1)
-        self.layout.addWidget(self.setFormatting, 21, 1, 1, 1)
-        self.layout.addWidget(self.showHTML, 21, 2, 1, 1)
-        self.layout.addWidget(self.setTags, 21, 3, 1, 1)
+        # Row, Col, rowSpan, colSpan
+        self.layout.addWidget(self.container,           0, 0, 12, 14)
+        self.layout.addWidget(self.minButton,           1, 10, 1, 1)
+        self.layout.addWidget(self.closeButton,         1, 11, 1, 1)
+        self.layout.addWidget(self.textBar,             2, 1, 1, 8)
+        self.layout.addItem(QtGui.QSpacerItem(1, 5),    3, 1, 1, 1)
 
-        self.layout.addWidget(self.loadFile, 21, 6, 1, 1)
-        self.layout.addWidget(self.saveFile, 21, 7, 1, 1)
-        self.layout.addWidget(self.helpButton, 21, 8, 1, 1)
+        self.layout.addWidget(self.buttonCryptMode,     4, 2, 1, 5)
+        self.layout.addWidget(self.buttonDecryptMode,   4, 7, 1, 5)
 
-        self.layout.addWidget(self.linePasswordL, 3, 1, 1, 4)
-        self.layout.addWidget(self.checkPwdL, 3, 5, 1, 1)
-        self.layout.addWidget(self.linePasswordR, 3, 6, 1, 4)
-        self.layout.addWidget(self.checkPwdR, 3, 10, 1, 1)
+        self.layout.addWidget(self.preProcess,          5, 2, 1, 1)
+        self.layout.addWidget(self.comboCrypt,          5, 3, 1, 1)
+        self.layout.addWidget(self.postProcess,         5, 4, 1, 1)
+        self.layout.addWidget(self.preDecrypt,          5, 7, 1, 1)
+        self.layout.addWidget(self.comboDecrypt,        5, 8, 1, 1)
+        self.layout.addWidget(self.postDecrypt,         5, 9, 1, 1)
 
-        self.layout.addWidget(self.lineRSAPathL, 4, 1, 1, 4)
-        self.layout.addWidget(self.lineRSAPathR, 4, 6, 1, 4)
-        self.layout.addWidget(self.buttonBrowseRSAL, 4, 5, 1, 1)
-        self.layout.addWidget(self.buttonBrowseRSAR, 4, 10, 1, 1)
+        self.layout.addWidget(self.linePasswordL,       6, 2, 1, 4)
+        self.layout.addWidget(self.linePasswordR,       6, 7, 1, 4)
+        self.layout.addWidget(self.checkPwdL,           6, 6, 1, 1)
+        self.layout.addWidget(self.checkPwdR,           6, 11, 1, 1)
 
-        self.layout.addWidget(self.nrLettersL, 21, 5, 1, 1)
-        self.layout.addWidget(self.nrLettersR, 21, 10, 1, 1)
-        self.layout.addWidget(self.leftText, 4, 1, 17, 5)
-        self.layout.addWidget(self.rightText, 4, 6, 17, 5)
+        self.layout.addWidget(self.lineRSAPathL,        7, 2, 1, 4)
+        self.layout.addWidget(self.lineRSAPathR,        7, 7, 1, 4)
+        self.layout.addWidget(self.buttonBrowseRSAL,    7, 6, 1, 1)
+        self.layout.addWidget(self.buttonBrowseRSAR,    7, 11, 1, 1)
+
+        self.layout.addWidget(self.leftText,            8, 2, 2, 5)
+        self.layout.addWidget(self.rightText,           8, 7, 2, 5)
+
+        self.layout.addWidget(self.setFormatting,       10, 2, 1, 1)
+        self.layout.addWidget(self.showHTML,            10, 3, 1, 1)
+        self.layout.addWidget(self.setTags,             10, 4, 1, 1)
+        self.layout.addWidget(self.loadFile,            10, 7, 1, 1)
+        self.layout.addWidget(self.saveFile,            10, 8, 1, 1)
+        self.layout.addWidget(self.helpButton,          10, 9, 1, 1)
+
+        self.layout.addWidget(self.nrLettersL,          10, 6, 1, 1)
+        self.layout.addWidget(self.nrLettersR,          10, 11, 1, 1)
 
         self.__setup() # Prepair all components!
         self.__connect() # Connect all components!
@@ -831,7 +842,14 @@ class Window(QtGui.QMainWindow):
         self.buttonDecryptMode.setCheckable(True)
         self.buttonDecryptMode.setToolTip('Switch to Decryption mode')
         self.buttonDecryptMode.setStyleSheet(STYLE_BUTTON)
+
         self.helpButton.setStyleSheet(STYLE_BUTTON)
+        self.minButton.setMaximumWidth(20)
+        self.minButton.setMaximumHeight(20)
+        self.minButton.setStyleSheet(STYLE_BUTTON)
+        self.closeButton.setMaximumWidth(20)
+        self.closeButton.setMaximumHeight(20)
+        self.closeButton.setStyleSheet(STYLE_BUTTON)
 
         # Some styles.
         self.loadFile.setStyleSheet(STYLE_BUTTON)
@@ -957,6 +975,9 @@ class Window(QtGui.QMainWindow):
         self.setFormatting.toggled.connect(self.onLeftTextChanged)
         self.setTags.toggled.connect(self.onLeftTextChanged)
         self.showHTML.toggled.connect(self.toggleHtml)
+        #
+        self.minButton.clicked.connect(lambda: self.setWindowState(QtCore.Qt.WindowMinimized))
+        self.closeButton.clicked.connect(lambda: self.close())
         #
         # ACTION !
         self.onCryptMode()
@@ -1134,8 +1155,8 @@ class Window(QtGui.QMainWindow):
         #
         # Setup default (no error) status.
         if self.buttonCryptMode.isChecked():
-            self.statusBar.setStyleSheet('color:blue')
-            self.statusBar.showMessage('  Encryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post))
+            self.textBar.setStyleSheet('color:blue')
+            self.textBar.setText('  Encryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post))
         #
         self.postDecrypt.setCurrentIndex(self.preProcess.currentIndex())
         self.comboDecrypt.setCurrentIndex(self.comboCrypt.currentIndex())
@@ -1153,8 +1174,8 @@ class Window(QtGui.QMainWindow):
             self.nrLettersR.setText('Enc: %i' % len(final))
         else:
             self.rightText.clear()
-            self.statusBar.setStyleSheet('color:red')
-            self.statusBar.showMessage(self.SE.error)
+            self.textBar.setStyleSheet('color:red')
+            self.textBar.setText(self.SE.error)
         #
 
     def onRightTextChanged(self):
@@ -1216,8 +1237,8 @@ class Window(QtGui.QMainWindow):
             return
         #
         if self.buttonDecryptMode.isChecked():
-            self.statusBar.setStyleSheet('color:blue')
-            self.statusBar.showMessage('  Decryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post))
+            self.textBar.setStyleSheet('color:blue')
+            self.textBar.setText('  Decryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post))
         #
         self.preProcess.setCurrentIndex(self.postDecrypt.currentIndex())
         self.comboCrypt.setCurrentIndex(self.comboDecrypt.currentIndex())
@@ -1236,8 +1257,8 @@ class Window(QtGui.QMainWindow):
             self.nrLettersR.setText('Enc: %i' % len(txt))
         else:
             self.leftText.clear()
-            self.statusBar.setStyleSheet('color:red')
-            self.statusBar.showMessage(self.SE.error)
+            self.textBar.setStyleSheet('color:red')
+            self.textBar.setText(self.SE.error)
         #
 
     def onSave(self):
