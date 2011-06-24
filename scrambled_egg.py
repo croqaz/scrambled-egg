@@ -62,6 +62,8 @@ SCRAMBLE_NR = {'None':'1', 'ROT13':'2', 'ZLIB':'3', 'BZ2':'4'}
 ENCRYPT_NR = {'AES':'1', 'ARC2':'2', 'CAST':'3', 'Blowfish':'5', 'DES3':'4', 'RSA':'6', 'None':'9'}
 ENCODE_NR = {'Base64 Codec':'4', 'Base32 Codec':'2', 'HEX Codec':'1', 'Quopri Codec':'9', 'String Escape':'6', 'UU Codec':'8', 'XML':'7'}
 #
+D = {}
+#
 
 def findg(g):
     for i in g:
@@ -657,47 +659,47 @@ class ScrambledEgg():
             return val
         #
 
+#
 
-STYLE_MAIN = '''
-QMainWindow {background:transparent}
-'''
+def loadThemes():
 
-STYLE_CONTAINER = '''
-#Container {background:white url(hash.gif); border:3px solid grey; border-radius:11px;}
-'''
+    script = os.path.abspath(__file__)
+    base = os.path.split(script)[0] + '/theme/theme.json'
+    #themes = [base+f for f in os.listdir(base) if os.path.isdir(base+f)]\
 
-STYLE_BUTTON = '''
-QPushButton {color:#2E2633; background-color:#E1EDB9;}
+    try:
+        c = open(base, 'r').read()
+        D = json.loads(c)
+    except:
+        D = {}
+
+    D['STYLE_MAIN'] = D.get('STYLE_MAIN', '''QMainWindow {background:transparent}''')
+
+    D['STYLE_CONTAINER'] = D.get('STYLE_CONTAINER', '''#Container {background:white url(hash.gif); border:3px solid grey; border-radius:11px;}''')
+
+    D['STYLE_BUTTON'] = D.get('STYLE_BUTTON', '''QPushButton {color:#2E2633; background-color:#E1EDB9;}
 QPushButton:checked {color:#555152; background-color:#F3EFEE;}
 QPushButton:disabled {background-color:#EFEBE7;}
-QPushButton::hover {color:#99173C;}
-'''
+QPushButton::hover {color:#99173C;}''')
 
-STYLE_CHECKBOX = '''
-QCheckBox {color:#2E2633;}
-QCheckBox::hover {color:#99173C;}
-'''
+    D['STYLE_CHECKBOX'] = D.get('STYLE_CHECKBOX', '''QCheckBox {color:#2E2633;} QCheckBox::hover {color:#99173C;}''')
 
-STYLE_LINEEDIT = '''
-QLineEdit {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;}
+    D['STYLE_LINEEDIT'] = D.get('STYLE_LINEEDIT', '''QLineEdit {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;}
 QLineEdit:disabled {background-color:#EFEBE7;}
-QLineEdit:focus {border:1px solid #99173C;}
-'''
+QLineEdit:focus {border:1px solid #99173C;}''')
 
-STYLE_TEXTEDIT = '''
-QTextEdit {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;}
+    D['STYLE_TEXTEDIT'] = D.get('STYLE_TEXTEDIT', '''QTextEdit {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;}
 QTextEdit:disabled {color:#555152; background-color:#EFEBE7;}
 QTextEdit:focus {border:1px solid #99173C;}
 QPlainTextEdit {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;}
 QPlainTextEdit:disabled {color:#555152; background-color:#EFEBE7;}
-QPlainTextEdit:focus {border:1px solid #99173C;}
-'''
+QPlainTextEdit:focus {border:1px solid #99173C;}''')
 
-STYLE_COMBOBOX = '''
-QComboBox {color:#2E2633;}
-QComboBox QAbstractItemView {selection-background-color:#E1EDB9;}
-'''
+    D['STYLE_COMBOBOX'] = D.get('STYLE_COMBOBOX', '''QComboBox {color:#2E2633;} QComboBox QAbstractItemView {selection-background-color:#E1EDB9;}''')
 
+    return D
+
+#
 
 class Container(QtGui.QWidget):
 
@@ -720,6 +722,7 @@ class Container(QtGui.QWidget):
         if(event.button() == QtCore.Qt.LeftButton):
             self.mMoving = False
 
+#
 
 class Window(QtGui.QMainWindow):
 
@@ -738,7 +741,7 @@ class Window(QtGui.QMainWindow):
         self.setWindowIcon(QtGui.QIcon(os.getcwd() + '/icon.ico'))
         self.setWindowFlags(QtCore.Qt.FramelessWindowHint)
         self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.setStyleSheet(STYLE_MAIN)
+        self.setStyleSheet(D['STYLE_MAIN'])
         self.setWindowOpacity(0.9)
         self.setAcceptDrops(True)
         self.SE = ScrambledEgg()
@@ -747,7 +750,7 @@ class Window(QtGui.QMainWindow):
         self.setCentralWidget(self.centralWidget)
         self.container = QtGui.QWidget(self.centralWidget) # Container.
         self.container.setObjectName('Container')
-        self.container.setStyleSheet(STYLE_CONTAINER)
+        self.container.setStyleSheet(D['STYLE_CONTAINER'])
 
         self.textBar = QtGui.QLabel(self) # Top text bar.
         self.layout = QtGui.QGridLayout(self.centralWidget) # Main Layout.
@@ -790,8 +793,8 @@ class Window(QtGui.QMainWindow):
         self.layout.addWidget(self.container,           0, 0, 12, 14)
         self.layout.addWidget(self.minButton,           1, 10, 1, 1)
         self.layout.addWidget(self.closeButton,         1, 11, 1, 1)
-        self.layout.addWidget(self.textBar,             2, 1, 1, 8)
-        self.layout.addItem(QtGui.QSpacerItem(1, 5),    3, 1, 1, 1)
+        self.layout.addWidget(self.textBar,             1, 1, 3, 8)
+        self.layout.addItem(QtGui.QSpacerItem(1, 8),    3, 1, 1, 1)
 
         self.layout.addWidget(self.buttonCryptMode,     4, 2, 1, 5)
         self.layout.addWidget(self.buttonDecryptMode,   4, 7, 1, 5)
@@ -838,24 +841,24 @@ class Window(QtGui.QMainWindow):
         self.buttonCryptMode.setCheckable(True)
         self.buttonCryptMode.setChecked(True)
         self.buttonCryptMode.setToolTip('Switch to Encryption mode')
-        self.buttonCryptMode.setStyleSheet(STYLE_BUTTON)
+        self.buttonCryptMode.setStyleSheet(D['STYLE_BUTTON'])
         self.buttonDecryptMode.setCheckable(True)
         self.buttonDecryptMode.setToolTip('Switch to Decryption mode')
-        self.buttonDecryptMode.setStyleSheet(STYLE_BUTTON)
+        self.buttonDecryptMode.setStyleSheet(D['STYLE_BUTTON'])
 
-        self.helpButton.setStyleSheet(STYLE_BUTTON)
+        self.helpButton.setStyleSheet(D['STYLE_BUTTON'])
         self.minButton.setMaximumWidth(20)
         self.minButton.setMaximumHeight(20)
-        self.minButton.setStyleSheet(STYLE_BUTTON)
+        self.minButton.setStyleSheet(D['STYLE_BUTTON'])
         self.closeButton.setMaximumWidth(20)
         self.closeButton.setMaximumHeight(20)
-        self.closeButton.setStyleSheet(STYLE_BUTTON)
+        self.closeButton.setStyleSheet(D['STYLE_BUTTON'])
 
         # Some styles.
-        self.loadFile.setStyleSheet(STYLE_BUTTON)
-        self.saveFile.setStyleSheet(STYLE_BUTTON)
-        self.leftText.setStyleSheet(STYLE_TEXTEDIT)
-        self.rightText.setStyleSheet(STYLE_TEXTEDIT)
+        self.loadFile.setStyleSheet(D['STYLE_BUTTON'])
+        self.saveFile.setStyleSheet(D['STYLE_BUTTON'])
+        self.leftText.setStyleSheet(D['STYLE_TEXTEDIT'])
+        self.rightText.setStyleSheet(D['STYLE_TEXTEDIT'])
         self.leftText.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding))
         self.rightText.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding))
 
@@ -863,30 +866,30 @@ class Window(QtGui.QMainWindow):
         self.linePasswordL.setEchoMode(QtGui.QLineEdit.Password)
         self.linePasswordL.setToolTip('Password used for encrypting the text')
         self.linePasswordL.setMaxLength(99)
-        self.linePasswordL.setStyleSheet(STYLE_LINEEDIT)
+        self.linePasswordL.setStyleSheet(D['STYLE_LINEEDIT'])
         self.checkPwdL.setTristate(False)
-        self.checkPwdL.setStyleSheet(STYLE_CHECKBOX)
+        self.checkPwdL.setStyleSheet(D['STYLE_CHECKBOX'])
         self.linePasswordR.setEchoMode(QtGui.QLineEdit.Password)
         self.linePasswordR.setToolTip('Password used for decrypting the text')
         self.linePasswordR.setMaxLength(99)
         self.linePasswordR.setDisabled(True)
-        self.linePasswordR.setStyleSheet(STYLE_LINEEDIT)
+        self.linePasswordR.setStyleSheet(D['STYLE_LINEEDIT'])
         self.checkPwdR.setTristate(False)
-        self.checkPwdR.setStyleSheet(STYLE_CHECKBOX)
+        self.checkPwdR.setStyleSheet(D['STYLE_CHECKBOX'])
 
         # RSA Path.
-        self.lineRSAPathL.setStyleSheet(STYLE_LINEEDIT)
+        self.lineRSAPathL.setStyleSheet(D['STYLE_LINEEDIT'])
         self.lineRSAPathL.setToolTip('RSA Encryption requires both a password and the path to a public/ private RSA key')
         self.lineRSAPathL.hide()
-        self.lineRSAPathR.setStyleSheet(STYLE_LINEEDIT)
+        self.lineRSAPathR.setStyleSheet(D['STYLE_LINEEDIT'])
         self.lineRSAPathR.setToolTip('RSA Decryption requires both a password and the path to a public/ private RSA key')
         self.lineRSAPathR.hide()
         self.lineRSAPathR.setDisabled(True)
 
-        self.buttonBrowseRSAL.setStyleSheet(STYLE_BUTTON)
+        self.buttonBrowseRSAL.setStyleSheet(D['STYLE_BUTTON'])
         self.buttonBrowseRSAL.hide()
         self.buttonBrowseRSAL.setMaximumWidth(60)
-        self.buttonBrowseRSAR.setStyleSheet(STYLE_BUTTON)
+        self.buttonBrowseRSAR.setStyleSheet(D['STYLE_BUTTON'])
         self.buttonBrowseRSAR.hide()
         self.buttonBrowseRSAR.setMaximumWidth(60)
         self.buttonBrowseRSAR.setDisabled(True)
@@ -894,28 +897,28 @@ class Window(QtGui.QMainWindow):
         # Formatted text.
         self.setFormatting.setTristate(False)
         self.setFormatting.setToolTip('Encrypt this text as HTML')
-        self.setFormatting.setStyleSheet(STYLE_CHECKBOX)
+        self.setFormatting.setStyleSheet(D['STYLE_CHECKBOX'])
         self.setTags.setTristate(False)
         self.setTags.setToolTip('Strip pre/enc/post tags')
-        self.setTags.setStyleSheet(STYLE_CHECKBOX)
+        self.setTags.setStyleSheet(D['STYLE_CHECKBOX'])
         self.showHTML.setTristate(False)
         self.showHTML.setToolTip('Toogle view HTML source behind the formatted text')
-        self.showHTML.setStyleSheet(STYLE_CHECKBOX)
+        self.showHTML.setStyleSheet(D['STYLE_CHECKBOX'])
 
         # All combo boxes.
         MIN = 120
         self.preProcess.setMinimumWidth(MIN)
-        self.preProcess.setStyleSheet(STYLE_COMBOBOX)
+        self.preProcess.setStyleSheet(D['STYLE_COMBOBOX'])
         self.comboCrypt.setMinimumWidth(MIN)
-        self.comboCrypt.setStyleSheet(STYLE_COMBOBOX)
+        self.comboCrypt.setStyleSheet(D['STYLE_COMBOBOX'])
         self.postProcess.setMinimumWidth(MIN)
-        self.postProcess.setStyleSheet(STYLE_COMBOBOX)
+        self.postProcess.setStyleSheet(D['STYLE_COMBOBOX'])
         self.preDecrypt.setMinimumWidth(MIN)
-        self.preDecrypt.setStyleSheet(STYLE_COMBOBOX)
+        self.preDecrypt.setStyleSheet(D['STYLE_COMBOBOX'])
         self.comboDecrypt.setMinimumWidth(MIN)
-        self.comboDecrypt.setStyleSheet(STYLE_COMBOBOX)
+        self.comboDecrypt.setStyleSheet(D['STYLE_COMBOBOX'])
         self.postDecrypt.setMinimumWidth(MIN)
-        self.postDecrypt.setStyleSheet(STYLE_COMBOBOX)
+        self.postDecrypt.setStyleSheet(D['STYLE_COMBOBOX'])
 
         # Pre combo-boxes.
         self.preProcess.setToolTip('Select pre-process')
@@ -1351,6 +1354,7 @@ class Window(QtGui.QMainWindow):
 
 if __name__ == '__main__':
 
+    D = loadThemes()
     app = QtGui.QApplication(sys.argv)
     window = Window()
     window.show()
