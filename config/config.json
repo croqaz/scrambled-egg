@@ -3,6 +3,6 @@
   "W_HEIGHT": 400,
   "W_MAX_HEIGHT": 660,
   "MIC_BTNS_POS": 1,
-  "MIC_BTNS_SPAN": 1,
+  "MIC_BTNS_SPAN": 2,
   "THEME": "default/theme.json"
 }

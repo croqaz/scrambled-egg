@@ -1,0 +1,15 @@
+{
+  "STYLE_CONTAINER": "#Container {background:QLinearGradient(x1:0, y1:0, x2:0, y2:1, stop:0 #20272d, stop:0.2 #5e696d); border:4px solid #4d5b5e;}",
+  "TXT_BAR_OK":  "color:#A7DBD8; font:bold normal \"DejaVu Sans\";",
+  "TXT_BAR_BAD": "color:#FA6900; font:bold normal \"DejaVu Sans\";",
+  "STYLE_BUTTON": "QPushButton        {background-color:#1b1b1b; color:#9b9b9b;} QPushButton:checked {background-color:#252525; color:#616161;} QPushButton:hover {color:#A7DBD8;} * {font:bold normal \"DejaVu Sans\";}",
+  "STYLE_MIN_BUTTON": "QPushButton    {background-color:#1b1b1b; color:#9b9b9b;} QPushButton:hover {color:#FA6900;} * {font:bold normal \"DejaVu Sans\";}",
+  "STYLE_CLOSE_BUTTON": "QPushButton  {background-color:#1b1b1b; color:#9b9b9b;} QPushButton:hover {color:#FA6900;} * {font:bold normal \"DejaVu Sans\";}",
+  "STYLE_LINEEDIT": "QLineEdit        {background-color:#252525; color:#A7DBD8; border:1px solid #252525; border-radius:1px;} QLineEdit:disabled      {color:#63645e; background-color:#3f3f3f;} QLineEdit:focus      {border:2px solid #252525;} * {font:bold normal \"DejaVu Sans\";}",
+  "STYLE_L_TEXTEDIT": "QTextEdit      {background-color:#252525; color:#A7DBD8; border:1px solid #252525; border-radius:1px;} QTextEdit:disabled      {color:#63645e; background-color:#3f3f3f;} QTextEdit:focus      {border:2px solid #252525;} * {font:bold normal \"DejaVu Sans\";}",
+  "STYLE_R_TEXTEDIT": "QPlainTextEdit {background-color:#252525; color:#A7DBD8; border:1px solid #252525; border-radius:1px;} QPlainTextEdit:disabled {color:#63645e; background-color:#3f3f3f;} QPlainTextEdit:focus {border:2px solid #252525;} * {font:bold normal \"DejaVu Sans\";}",
+  "STYLE_CHECKBOX": "QCheckBox {color:#9b9b9b; margin:0px;} QCheckBox::hover {background:transparent; color:#FA6900; margin:0px;} * {font:bold normal \"DejaVu Sans\";}",
+  "STYLE_COMBOBOX": "QComboBox {background-color:#1f1f1f; color:#9b9b9b;} QComboBox QAbstractItemView {color:#9b9b9b; background-color:#3f3f3f; selection-background-color:#3f3f3f;} * {font:normal normal \"DejaVu Sans\";}",
+  "MIN_BTN_TXT": "..",
+  "CLOSE_BTN_TXT": "::"
+}

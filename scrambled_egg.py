@@ -665,6 +665,9 @@ class ScrambledEgg():
 class Container(QtGui.QWidget):
 
     def __init__(self, parent):
+        '''
+        The main container. It's not transparent.
+        '''
         super(Container, self).__init__(parent)
         self.mMoving = False
         self.setMouseTracking(False)
@@ -689,9 +692,10 @@ class Window(QtGui.QMainWindow):
 
     def __init__(self):
         '''
-        Init function.
+        Main window class.
+        It's frameless and transparent.
         '''
-        super(Window, self).__init__()
+        super(Window, self).__init__(None, QtCore.Qt.FramelessWindowHint)
         QtGui.QApplication.setStyle(QtGui.QStyleFactory.create('CleanLooks'))
         QtGui.QApplication.setPalette(QtGui.QApplication.style().standardPalette())
 
@@ -699,10 +703,9 @@ class Window(QtGui.QMainWindow):
         self.setWindowIcon(QtGui.QIcon(icon_path))
         self.resize(C['W_WIDTH'], C['W_HEIGHT'])
         self.setMaximumHeight(C['W_MAX_HEIGHT'])
-        self.setWindowTitle('Scrambled Egg :: Live Crypt')
-        self.setWindowFlags(QtCore.Qt.FramelessWindowHint)
-        self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
         self.setStyleSheet(D['STYLE_MAIN'])
+        self.setWindowTitle('Scrambled Egg :: Live Crypt')
+        self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
         self.setWindowOpacity(0.9)
         self.setAcceptDrops(True)
         self.SE = ScrambledEgg()
@@ -747,8 +750,8 @@ class Window(QtGui.QMainWindow):
         self.saveFile = QtGui.QPushButton('Export', self.centralWidget) # Right side.
         self.helpButton = QtGui.QPushButton('Help !', self.centralWidget) # Right side.
 
-        self.minButton = QtGui.QPushButton('_', self.centralWidget)
-        self.closeButton = QtGui.QPushButton('x', self.centralWidget)
+        self.minButton = QtGui.QPushButton(D['MIN_BTN_TXT'], self.centralWidget)
+        self.closeButton = QtGui.QPushButton(D['CLOSE_BTN_TXT'], self.centralWidget)
         self.micLayout = QtGui.QHBoxLayout()
         self.micLayout.addWidget(self.minButton)
         self.micLayout.addWidget(self.closeButton)
@@ -1352,7 +1355,7 @@ def loadThemes():
     except:
         print 'Cannot load theme: `%s` ! Using builtin theme !' % theme_path
 
-    D['STYLE_MAIN']         = D.get('STYLE_MAIN', "QMainWindow {background:transparent}")
+    D['STYLE_MAIN']         = D.get('STYLE_MAIN', "QMainWindow {background:transparent;}")
     D['STYLE_CONTAINER']    = D.get('STYLE_CONTAINER',   "#Container {background:white; border:3px solid grey; border-radius:11px;}")
     D['STYLE_BUTTON']       = D.get('STYLE_BUTTON',      "QPushButton {color:#2E2633; background-color:#E1EDB9;} QPushButton:checked {color:#555152; background-color:#F3EFEE;} QPushButton:disabled {background-color:#EFEBE7;} QPushButton::hover {color:#99173C;}")
     D['TXT_BAR_OK']         = D.get('TXT_BAR_OK',  "color:blue")
@@ -1365,6 +1368,8 @@ def loadThemes():
     D['STYLE_R_TEXTEDIT']   = D.get('STYLE_R_TEXTEDIT', "QPlainTextEdit {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;} QPlainTextEdit:disabled {color:#555152; background-color:#EFEBE7;} QPlainTextEdit:focus {border:1px solid #99173C;}")
     D['STYLE_CHECKBOX']     = D.get('STYLE_CHECKBOX',   "QCheckBox {color:#2E2633; margin:0px;} QCheckBox::hover {color:#99173C; background:transparent; margin:0px;}")
     D['STYLE_COMBOBOX']     = D.get('STYLE_COMBOBOX',   "QComboBox {color:#2E2633;} QComboBox QAbstractItemView {selection-background-color:#E1EDB9;}")
+    D['MIN_BTN_TXT']        = D.get('MIN_BTN_TXT', '_')
+    D['CLOSE_BTN_TXT']      = D.get('CLOSE_BTN_TXT', 'X')
     return D
 
 #
