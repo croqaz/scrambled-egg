@@ -62,7 +62,8 @@ SCRAMBLE_NR = {'None':'1', 'ROT13':'2', 'ZLIB':'3', 'BZ2':'4'}
 ENCRYPT_NR = {'AES':'1', 'ARC2':'2', 'CAST':'3', 'Blowfish':'5', 'DES3':'4', 'RSA':'6', 'None':'9'}
 ENCODE_NR = {'Base64 Codec':'4', 'Base32 Codec':'2', 'HEX Codec':'1', 'Quopri Codec':'9', 'String Escape':'6', 'UU Codec':'8', 'XML':'7'}
 #
-D = {}
+C = {} # Config.
+D = {} # Themes.
 #
 
 def findg(g):
@@ -661,42 +662,55 @@ class ScrambledEgg():
 
 #
 
+def loadConfig():
+
+    script_path = os.path.abspath(__file__)
+    base_path = os.path.split(script_path)[0] + '/config/'
+    C = {}
+
+    if not os.path.exists(base_path):
+        print 'Fatal error ! Config path does not exist !'
+    else:
+        try:
+            c = open(base_path + 'config.json', 'r').read()
+            C = json.loads(c)
+        except:
+            print 'Invalid json file `%s` ! Cannot load config !' % (base_path + 'config.json')
+
+    C['W_WIDTH'] = C.get('W_WIDTH', 800)
+    C['W_HEIGHT'] = C.get('W_HEIGHT', 420)
+    C['W_MAX_HEIGHT'] = C.get('W_MAX_HEIGHT', 660)
+    C['THEME'] = C.get('THEME', 'default/theme.json')
+    C['MIC_BTNS_POS'] = C.get('MIC_BTNS_POS', 1)
+    C['MIC_BTNS_SPAN'] = C.get('MIC_BTNS_SPAN', 1)
+    return C
+
+#
+
 def loadThemes():
 
-    script = os.path.abspath(__file__)
-    base = os.path.split(script)[0] + '/theme/theme.json'
-    #themes = [base+f for f in os.listdir(base) if os.path.isdir(base+f)]\
+    script_path = os.path.abspath(__file__)
+    theme_file = os.path.split(script_path)[0] + '/config/themes/' + C['THEME']
+    theme_path = os.path.split(theme_file)[0]
+    D = {}
 
     try:
-        c = open(base, 'r').read()
+        c = open(theme_file, 'r').read()
+        c = c.replace('%HOME%', theme_path)
         D = json.loads(c)
     except:
-        D = {}
+        print 'Invalid json file `%s` ! Cannot load theme !' % theme_path
 
-    D['STYLE_MAIN'] = D.get('STYLE_MAIN', '''QMainWindow {background:transparent}''')
-
-    D['STYLE_CONTAINER'] = D.get('STYLE_CONTAINER', '''#Container {background:white url(hash.gif); border:3px solid grey; border-radius:11px;}''')
-
-    D['STYLE_BUTTON'] = D.get('STYLE_BUTTON', '''QPushButton {color:#2E2633; background-color:#E1EDB9;}
-QPushButton:checked {color:#555152; background-color:#F3EFEE;}
-QPushButton:disabled {background-color:#EFEBE7;}
-QPushButton::hover {color:#99173C;}''')
-
-    D['STYLE_CHECKBOX'] = D.get('STYLE_CHECKBOX', '''QCheckBox {color:#2E2633;} QCheckBox::hover {color:#99173C;}''')
-
-    D['STYLE_LINEEDIT'] = D.get('STYLE_LINEEDIT', '''QLineEdit {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;}
-QLineEdit:disabled {background-color:#EFEBE7;}
-QLineEdit:focus {border:1px solid #99173C;}''')
-
-    D['STYLE_TEXTEDIT'] = D.get('STYLE_TEXTEDIT', '''QTextEdit {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;}
-QTextEdit:disabled {color:#555152; background-color:#EFEBE7;}
-QTextEdit:focus {border:1px solid #99173C;}
-QPlainTextEdit {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;}
-QPlainTextEdit:disabled {color:#555152; background-color:#EFEBE7;}
-QPlainTextEdit:focus {border:1px solid #99173C;}''')
-
-    D['STYLE_COMBOBOX'] = D.get('STYLE_COMBOBOX', '''QComboBox {color:#2E2633;} QComboBox QAbstractItemView {selection-background-color:#E1EDB9;}''')
-
+    D['STYLE_MAIN']         = D.get('STYLE_MAIN', "QMainWindow {background:transparent}")
+    D['STYLE_CONTAINER']    = D.get('STYLE_CONTAINER', "#Container {background:white; border:3px solid grey; border-radius:11px;}")
+    D['STYLE_BUTTON']       = D.get('STYLE_BUTTON', '''QPushButton {color:#2E2633; background-color:#E1EDB9;} QPushButton:checked {color:#555152; background-color:#F3EFEE;} QPushButton:disabled {background-color:#EFEBE7;} QPushButton::hover {color:#99173C;}''')
+    D['STYLE_HELP_BUTTON']  = D.get('STYLE_HELP_BUTTON', D['STYLE_BUTTON'])
+    D['STYLE_MIN_BUTTON']   = D.get('STYLE_MIN_BUTTON', D['STYLE_BUTTON'])
+    D['STYLE_CLOSE_BUTTON'] = D.get('STYLE_CLOSE_BUTTON', D['STYLE_BUTTON'])
+    D['STYLE_CHECKBOX']     = D.get('STYLE_CHECKBOX', "QCheckBox {color:#2E2633;} QCheckBox::hover {color:#99173C;}")
+    D['STYLE_LINEEDIT']     = D.get('STYLE_LINEEDIT', '''QLineEdit {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;} QLineEdit:disabled {background-color:#EFEBE7;} QLineEdit:focus {border:1px solid #99173C;}''')
+    D['STYLE_TEXTEDIT']     = D.get('STYLE_TEXTEDIT', '''QTextEdit {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;} QTextEdit:disabled {color:#555152; background-color:#EFEBE7;} QTextEdit:focus {border:1px solid #99173C;} QPlainTextEdit {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;} QPlainTextEdit:disabled {color:#555152; background-color:#EFEBE7;} QPlainTextEdit:focus {border:1px solid #99173C;}''')
+    D['STYLE_COMBOBOX']     = D.get('STYLE_COMBOBOX', "QComboBox {color:#2E2633;} QComboBox QAbstractItemView {selection-background-color:#E1EDB9;}")
     return D
 
 #
@@ -734,11 +748,11 @@ class Window(QtGui.QMainWindow):
         QtGui.QApplication.setStyle(QtGui.QStyleFactory.create('CleanLooks'))
         QtGui.QApplication.setPalette(QtGui.QApplication.style().standardPalette())
 
-        self.resize(800, 400)
-        self.setMaximumWidth(950)
-        self.setMaximumHeight(600)
+        icon_path = os.path.split(os.path.abspath(__file__))[0] + '/config/icon.ico'
+        self.setWindowIcon(QtGui.QIcon(icon_path))
+        self.resize(C['W_WIDTH'], C['W_HEIGHT'])
+        self.setMaximumHeight(C['W_MAX_HEIGHT'])
         self.setWindowTitle('Scrambled Egg :: Live Crypt')
-        self.setWindowIcon(QtGui.QIcon(os.getcwd() + '/icon.ico'))
         self.setWindowFlags(QtCore.Qt.FramelessWindowHint)
         self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
         self.setStyleSheet(D['STYLE_MAIN'])
@@ -756,8 +770,8 @@ class Window(QtGui.QMainWindow):
         self.layout = QtGui.QGridLayout(self.centralWidget) # Main Layout.
         self.centralWidget.setLayout(self.layout)
 
-        self.leftText = QtGui.QTextEdit(self.centralWidget)       # To write clean text.
-        self.rightText = QtGui.QPlainTextEdit(self.centralWidget) # To view encrypted text.
+        self.leftText = QtGui.QTextEdit(' ', self.centralWidget)        # To write clean text.
+        self.rightText = QtGui.QPlainTextEdit(' ' , self.centralWidget) # To view encrypted text.
 
         self.buttonCryptMode = QtGui.QPushButton(self.centralWidget)
         self.buttonDecryptMode = QtGui.QPushButton(self.centralWidget)
@@ -788,12 +802,14 @@ class Window(QtGui.QMainWindow):
 
         self.minButton = QtGui.QPushButton('_', self.centralWidget)
         self.closeButton = QtGui.QPushButton('x', self.centralWidget)
+        self.micLayout = QtGui.QHBoxLayout()
+        self.micLayout.addWidget(self.minButton)
+        self.micLayout.addWidget(self.closeButton)
 
         # Row, Col, rowSpan, colSpan
-        self.layout.addWidget(self.container,           0, 0, 12, 14)
-        self.layout.addWidget(self.minButton,           1, 10, 1, 1)
-        self.layout.addWidget(self.closeButton,         1, 11, 1, 1)
+        self.layout.addWidget(self.container,           0, 0, 12, 15)
         self.layout.addWidget(self.textBar,             1, 1, 3, 8)
+        self.layout.addLayout(self.micLayout,           1, 10+C['MIC_BTNS_POS'], 1, C['MIC_BTNS_SPAN'])
         self.layout.addItem(QtGui.QSpacerItem(1, 8),    3, 1, 1, 1)
 
         self.layout.addWidget(self.buttonCryptMode,     4, 2, 1, 5)
@@ -846,13 +862,13 @@ class Window(QtGui.QMainWindow):
         self.buttonDecryptMode.setToolTip('Switch to Decryption mode')
         self.buttonDecryptMode.setStyleSheet(D['STYLE_BUTTON'])
 
-        self.helpButton.setStyleSheet(D['STYLE_BUTTON'])
-        self.minButton.setMaximumWidth(20)
-        self.minButton.setMaximumHeight(20)
-        self.minButton.setStyleSheet(D['STYLE_BUTTON'])
-        self.closeButton.setMaximumWidth(20)
-        self.closeButton.setMaximumHeight(20)
-        self.closeButton.setStyleSheet(D['STYLE_BUTTON'])
+        self.helpButton.setStyleSheet(D['STYLE_HELP_BUTTON'])
+        self.minButton.setMaximumWidth(25)
+        self.minButton.setMaximumHeight(25)
+        self.minButton.setStyleSheet(D['STYLE_MIN_BUTTON'])
+        self.closeButton.setMaximumWidth(25)
+        self.closeButton.setMaximumHeight(25)
+        self.closeButton.setStyleSheet(D['STYLE_CLOSE_BUTTON'])
 
         # Some styles.
         self.loadFile.setStyleSheet(D['STYLE_BUTTON'])
@@ -1354,6 +1370,7 @@ class Window(QtGui.QMainWindow):
 
 if __name__ == '__main__':
 
+    C = loadConfig()
     D = loadThemes()
     app = QtGui.QApplication(sys.argv)
     window = Window()
