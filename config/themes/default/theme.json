@@ -1,10 +1,11 @@
 {
   "STYLE_MAIN": "QMainWindow {background:transparent}",
-  "STYLE_CONTAINER": "#Container {background:white url(%HOME%/hash.gif); border:3px solid grey; border-radius:11px;}",
-  "STYLE_MIN_BUTTON": "QPushButton {background-color:#fcc;}",
-  "STYLE_CLOSE_BUTTON": "QPushButton {background-color:#fcc;}",
-  "STYLE_CHECKBOX": "QCheckBox {color:#2E2633;} QCheckBox::hover {color:#99173C;}",
-  "STYLE_LINEEDIT": "QLineEdit {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;} QLineEdit:disabled {background-color:#EFEBE7;} QLineEdit:focus {border:1px solid #99173C;}",
-  "STYLE_TEXTEDIT": "QTextEdit {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;}  QTextEdit:disabled {color:#555152; background-color:#EFEBE7;} QTextEdit:focus {border:1px solid #99173C;} QPlainTextEdit {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;} QPlainTextEdit:disabled {color:#555152; background-color:#EFEBE7;} QPlainTextEdit:focus {border:1px solid #99173C;}",
+  "STYLE_CONTAINER": "#Container {background:#cdc url(%HOME%/hash.png); border:3px solid #99173C; border-radius:11px;}",
+  "STYLE_MIN_BUTTON": "QPushButton {background-color:#dcc;}",
+  "STYLE_CLOSE_BUTTON": "QPushButton {background-color:#dcc;}",
+  "STYLE_CHECKBOX": "QCheckBox {color:#2E2633; margin:0px;} QCheckBox::hover {color:#99173C; background:transparent; margin:0px;}",
+  "STYLE_LINEEDIT": "QLineEdit        {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;} QLineEdit:disabled      {background-color:#EFEBE7;}                QLineEdit:focus      {border:1px solid #99173C;}",
+  "STYLE_L_TEXTEDIT": "QTextEdit      {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;} QTextEdit:disabled      {color:#555152; background-color:#EFEBE7;} QTextEdit:focus      {border:1px solid #99173C;}",
+  "STYLE_R_TEXTEDIT": "QPlainTextEdit {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;} QPlainTextEdit:disabled {color:#555152; background-color:#EFEBE7;} QPlainTextEdit:focus {border:1px solid #99173C;}",
   "STYLE_COMBOBOX": "QComboBox {color:#2E2633;} QComboBox QAbstractItemView {selection-background-color:#E1EDB9;}"
 }

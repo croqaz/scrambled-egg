@@ -1,0 +1,13 @@
+{
+  "STYLE_CONTAINER": "#Container {background:QLinearGradient(x1:0, y1:0, x2:0, y2:1, stop:0 #73A2BD, stop:0.2 #eef) url(%HOME%/bg.png); border:3px solid #210C20; border-radius:11px;}",
+  "TXT_BAR_OK":  "color:#210C20; font-weight:bold; font-size:14px;",
+  "TXT_BAR_BAD": "color:#99173C; font-weight:bold; font-size:14px;",
+  "STYLE_BUTTON": "QPushButton       {background-color:#BACDB2; padding:4px; border:1px solid #210C20; border-radius:3px;} QPushButton:checked {background-color:#8A9D82; padding:4px; border:1px solid #423842; border-radius:3px;} QPushButton:hover {background-color:#AABDA2;}",
+  "STYLE_MIN_BUTTON": "QPushButton   {background-color:rgba(110, 138, 123, 25%);} QPushButton:hover {background-color:rgba(33, 12, 32, 33%);}",
+  "STYLE_CLOSE_BUTTON": "QPushButton {background-color:rgba(110, 138, 123, 25%);} QPushButton:hover {background-color:rgba(33, 12, 32, 33%);}",
+  "STYLE_CHECKBOX": "QCheckBox {color:#2E2633; margin:0px;} QCheckBox::hover {background:transparent; color:#99173C; margin:0px;}",
+  "STYLE_LINEEDIT": "QLineEdit        {background-color:#F2F2DA; border:1px solid #967C52; border-radius:4px;} QLineEdit:disabled      {color:#210C20; background-color:#eef;} QLineEdit:focus      {border:2px solid #967C52;}",
+  "STYLE_L_TEXTEDIT": "QTextEdit      {background-color:#F2F2DA; border:1px solid #967C52; border-radius:4px;} QTextEdit:disabled      {color:#210C20; background-color:#eef;} QTextEdit:focus      {border:2px solid #967C52;}",
+  "STYLE_R_TEXTEDIT": "QPlainTextEdit {background-color:#F2F2DA; border:1px solid #967C52; border-radius:4px;} QPlainTextEdit:disabled {color:#210C20; background-color:#eef;} QPlainTextEdit:focus {border:1px solid #967C52;}",
+  "STYLE_COMBOBOX": "QComboBox {color:#2E2633;} QComboBox QAbstractItemView {selection-background-color:#AABDA2;}"
+}

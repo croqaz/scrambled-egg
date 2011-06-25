@@ -662,59 +662,6 @@ class ScrambledEgg():
 
 #
 
-def loadConfig():
-
-    script_path = os.path.abspath(__file__)
-    base_path = os.path.split(script_path)[0] + '/config/'
-    C = {}
-
-    if not os.path.exists(base_path):
-        print 'Fatal error ! Config path does not exist !'
-    else:
-        try:
-            c = open(base_path + 'config.json', 'r').read()
-            C = json.loads(c)
-        except:
-            print 'Invalid json file `%s` ! Cannot load config !' % (base_path + 'config.json')
-
-    C['W_WIDTH'] = C.get('W_WIDTH', 800)
-    C['W_HEIGHT'] = C.get('W_HEIGHT', 420)
-    C['W_MAX_HEIGHT'] = C.get('W_MAX_HEIGHT', 660)
-    C['THEME'] = C.get('THEME', 'default/theme.json')
-    C['MIC_BTNS_POS'] = C.get('MIC_BTNS_POS', 1)
-    C['MIC_BTNS_SPAN'] = C.get('MIC_BTNS_SPAN', 1)
-    return C
-
-#
-
-def loadThemes():
-
-    script_path = os.path.abspath(__file__)
-    theme_file = os.path.split(script_path)[0] + '/config/themes/' + C['THEME']
-    theme_path = os.path.split(theme_file)[0]
-    D = {}
-
-    try:
-        c = open(theme_file, 'r').read()
-        c = c.replace('%HOME%', theme_path)
-        D = json.loads(c)
-    except:
-        print 'Invalid json file `%s` ! Cannot load theme !' % theme_path
-
-    D['STYLE_MAIN']         = D.get('STYLE_MAIN', "QMainWindow {background:transparent}")
-    D['STYLE_CONTAINER']    = D.get('STYLE_CONTAINER', "#Container {background:white; border:3px solid grey; border-radius:11px;}")
-    D['STYLE_BUTTON']       = D.get('STYLE_BUTTON', '''QPushButton {color:#2E2633; background-color:#E1EDB9;} QPushButton:checked {color:#555152; background-color:#F3EFEE;} QPushButton:disabled {background-color:#EFEBE7;} QPushButton::hover {color:#99173C;}''')
-    D['STYLE_HELP_BUTTON']  = D.get('STYLE_HELP_BUTTON', D['STYLE_BUTTON'])
-    D['STYLE_MIN_BUTTON']   = D.get('STYLE_MIN_BUTTON', D['STYLE_BUTTON'])
-    D['STYLE_CLOSE_BUTTON'] = D.get('STYLE_CLOSE_BUTTON', D['STYLE_BUTTON'])
-    D['STYLE_CHECKBOX']     = D.get('STYLE_CHECKBOX', "QCheckBox {color:#2E2633;} QCheckBox::hover {color:#99173C;}")
-    D['STYLE_LINEEDIT']     = D.get('STYLE_LINEEDIT', '''QLineEdit {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;} QLineEdit:disabled {background-color:#EFEBE7;} QLineEdit:focus {border:1px solid #99173C;}''')
-    D['STYLE_TEXTEDIT']     = D.get('STYLE_TEXTEDIT', '''QTextEdit {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;} QTextEdit:disabled {color:#555152; background-color:#EFEBE7;} QTextEdit:focus {border:1px solid #99173C;} QPlainTextEdit {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;} QPlainTextEdit:disabled {color:#555152; background-color:#EFEBE7;} QPlainTextEdit:focus {border:1px solid #99173C;}''')
-    D['STYLE_COMBOBOX']     = D.get('STYLE_COMBOBOX', "QComboBox {color:#2E2633;} QComboBox QAbstractItemView {selection-background-color:#E1EDB9;}")
-    return D
-
-#
-
 class Container(QtGui.QWidget):
 
     def __init__(self, parent):
@@ -873,8 +820,8 @@ class Window(QtGui.QMainWindow):
         # Some styles.
         self.loadFile.setStyleSheet(D['STYLE_BUTTON'])
         self.saveFile.setStyleSheet(D['STYLE_BUTTON'])
-        self.leftText.setStyleSheet(D['STYLE_TEXTEDIT'])
-        self.rightText.setStyleSheet(D['STYLE_TEXTEDIT'])
+        self.leftText.setStyleSheet(D['STYLE_L_TEXTEDIT'])
+        self.rightText.setStyleSheet(D['STYLE_R_TEXTEDIT'])
         self.leftText.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding))
         self.rightText.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding))
 
@@ -1174,7 +1121,7 @@ class Window(QtGui.QMainWindow):
         #
         # Setup default (no error) status.
         if self.buttonCryptMode.isChecked():
-            self.textBar.setStyleSheet('color:blue')
+            self.textBar.setStyleSheet(D['TXT_BAR_OK'])
             self.textBar.setText('  Encryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post))
         #
         self.postDecrypt.setCurrentIndex(self.preProcess.currentIndex())
@@ -1193,7 +1140,7 @@ class Window(QtGui.QMainWindow):
             self.nrLettersR.setText('Enc: %i' % len(final))
         else:
             self.rightText.clear()
-            self.textBar.setStyleSheet('color:red')
+            self.textBar.setStyleSheet(D['TXT_BAR_BAD'])
             self.textBar.setText(self.SE.error)
         #
 
@@ -1256,7 +1203,7 @@ class Window(QtGui.QMainWindow):
             return
         #
         if self.buttonDecryptMode.isChecked():
-            self.textBar.setStyleSheet('color:blue')
+            self.textBar.setStyleSheet(D['TXT_BAR_OK'])
             self.textBar.setText('  Decryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post))
         #
         self.preProcess.setCurrentIndex(self.postDecrypt.currentIndex())
@@ -1276,7 +1223,7 @@ class Window(QtGui.QMainWindow):
             self.nrLettersR.setText('Enc: %i' % len(txt))
         else:
             self.leftText.clear()
-            self.textBar.setStyleSheet('color:red')
+            self.textBar.setStyleSheet(D['TXT_BAR_BAD'])
             self.textBar.setText(self.SE.error)
         #
 
@@ -1368,6 +1315,60 @@ class Window(QtGui.QMainWindow):
 
 #
 
+def loadConfig():
+
+    script_path = os.path.abspath(__file__)
+    base_path = os.path.split(script_path)[0] + '/config/'
+    C = {}
+
+    if os.path.exists(base_path):
+        try:
+            c = open(base_path + 'config.json', 'r').read()
+            C = json.loads(c)
+        except:
+            print 'Cannot load config: `%s` ! Using builtin config !' % (base_path + 'config.json')
+
+    C['W_WIDTH'] = C.get('W_WIDTH', 800)
+    C['W_HEIGHT'] = C.get('W_HEIGHT', 420)
+    C['W_MAX_HEIGHT'] = C.get('W_MAX_HEIGHT', 660)
+    C['THEME'] = C.get('THEME', 'default/theme.json')
+    C['MIC_BTNS_POS'] = C.get('MIC_BTNS_POS', 1)
+    C['MIC_BTNS_SPAN'] = C.get('MIC_BTNS_SPAN', 1)
+    return C
+
+#
+
+def loadThemes():
+
+    script_path = os.path.abspath(__file__)
+    theme_file = os.path.split(script_path)[0] + '/config/themes/' + C['THEME']
+    theme_path = os.path.split(theme_file)[0]
+    D = {}
+
+    try:
+        c = open(theme_file, 'r').read()
+        c = c.replace('%HOME%', theme_path)
+        D = json.loads(c)
+    except:
+        print 'Cannot load theme: `%s` ! Using builtin theme !' % theme_path
+
+    D['STYLE_MAIN']         = D.get('STYLE_MAIN', "QMainWindow {background:transparent}")
+    D['STYLE_CONTAINER']    = D.get('STYLE_CONTAINER',   "#Container {background:white; border:3px solid grey; border-radius:11px;}")
+    D['STYLE_BUTTON']       = D.get('STYLE_BUTTON',      "QPushButton {color:#2E2633; background-color:#E1EDB9;} QPushButton:checked {color:#555152; background-color:#F3EFEE;} QPushButton:disabled {background-color:#EFEBE7;} QPushButton::hover {color:#99173C;}")
+    D['TXT_BAR_OK']         = D.get('TXT_BAR_OK',  "color:blue")
+    D['TXT_BAR_BAD']        = D.get('TXT_BAR_BAD', "color:red")
+    D['STYLE_HELP_BUTTON']  = D.get('STYLE_HELP_BUTTON',  D['STYLE_BUTTON'])
+    D['STYLE_MIN_BUTTON']   = D.get('STYLE_MIN_BUTTON',   D['STYLE_BUTTON'])
+    D['STYLE_CLOSE_BUTTON'] = D.get('STYLE_CLOSE_BUTTON', D['STYLE_BUTTON'])
+    D['STYLE_LINEEDIT']     = D.get('STYLE_LINEEDIT',   "QLineEdit      {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;} QLineEdit:disabled      {background-color:#EFEBE7;}                QLineEdit:focus      {border:1px solid #99173C;}")
+    D['STYLE_L_TEXTEDIT']   = D.get('STYLE_L_TEXTEDIT', "QTextEdit      {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;} QTextEdit:disabled      {color:#555152; background-color:#EFEBE7;} QTextEdit:focus      {border:1px solid #99173C;}")
+    D['STYLE_R_TEXTEDIT']   = D.get('STYLE_R_TEXTEDIT', "QPlainTextEdit {background-color:#E1EDB9; border:1px solid #A59D95; border-radius:4px;} QPlainTextEdit:disabled {color:#555152; background-color:#EFEBE7;} QPlainTextEdit:focus {border:1px solid #99173C;}")
+    D['STYLE_CHECKBOX']     = D.get('STYLE_CHECKBOX',   "QCheckBox {color:#2E2633; margin:0px;} QCheckBox::hover {color:#99173C; background:transparent; margin:0px;}")
+    D['STYLE_COMBOBOX']     = D.get('STYLE_COMBOBOX',   "QComboBox {color:#2E2633;} QComboBox QAbstractItemView {selection-background-color:#E1EDB9;}")
+    return D
+
+#
+
 if __name__ == '__main__':
 
     C = loadConfig()
@@ -1376,5 +1377,6 @@ if __name__ == '__main__':
     window = Window()
     window.show()
     sys.exit(app.exec_())
-
+#
 # Eof()
+#
