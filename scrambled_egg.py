@@ -1350,6 +1350,7 @@ def loadThemes():
 
     try:
         c = open(theme_file, 'r').read()
+        theme_path = theme_path.replace('\\', '/')
         c = c.replace('%HOME%', theme_path)
         D = json.loads(c)
     except:
