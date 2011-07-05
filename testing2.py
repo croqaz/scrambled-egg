@@ -1,31 +1,41 @@
 
-import os, shutil, glob
-import random
+import os, shutil
 from time import clock
+from Crypto import Random
+from Crypto.Random import random
 from Crypto.Hash import MD5
 import logging as log
 import scrambled_egg
-
-#path = '/media/Disk/Projekte/p-scrambled-egg/trunk/some_files'
-path = r'D:\[[]Projects[]]\Scrambled-Egg\some_files'
-files = glob.glob(path+'/*.*')
 
 _SCRAMBLE_D = scrambled_egg.SCRAMBLE_D
 del _SCRAMBLE_D['None']
 _ENC = scrambled_egg.ENC
 del _ENC['None']
 _ENCODE_D = {'Base64 Codec':'64', 'Base32 Codec':'32', 'HEX Codec':'H'}
+
 PASSED = True
+TESTS = 10
 
 s = scrambled_egg.ScrambledEgg()
-s.rsa_path = 'k1.txt'
+s.rsa_path = 'k1.txt' # The path to the test RSA Key.
+
+def RandText():
+    # Returns a random piece of text.
+    words = random.randrange(1, 99)
+    txt = []
+    for i in range(words):
+        # Word length.
+        L = random.randrange(1, 99)
+        txt.append(Random.new().read(L))
+    return ' '.join(txt)
 
 def RandPassword():
     # Returns a random password between 1 and 128.
     L = random.randrange(1, 128)
     pwd = []
     for i in range(L):
-        pwd.append( chr(random.randrange(48, 122)) )
+        # From 'space' to '~'.
+        pwd.append( chr(random.randrange(32, 126)) )
     pwd = ''.join(pwd)
     L = len(pwd)
     return pwd
@@ -38,16 +48,15 @@ def splitthousands(s, sep=','):
 
 log.basicConfig(level=10, format='%(asctime)s %(levelname)-10s %(message)s', datefmt='%y-%m-%d %H:%M:%S', filename='Testing2_Log.Log', filemode='w')
 console = log.StreamHandler() ; console.setLevel(10) ; log.getLogger('').addHandler(console) # Print + write log.
-log.info('Testing started, %i files.\n' % len(files))
+log.info('Preparing to run %i tests.\n' % TESTS)
 
-for f in files:
+for f in range(1, TESTS+1):
     #
     SPEEDs = {}
     SIZEs = {}
-    fname = os.path.split(f)[1]
-    log.info('Testing filename `%s`.' % fname)
+    log.info('Test number [%i] ...' % f)
     #
-    txt = open(f, 'rb').read()
+    txt = RandText()
     L = len(txt)
     H = MD5.new(txt).digest()
     #
@@ -96,13 +105,13 @@ for f in files:
     #
     log.info('''\n
     ----- ----- -----
-    Statistics for filename `%s`, size %s bytes.
+    Statistics for test `%i`, size %s characters.
     Best speed is `%s` with %.3f sec.
-    Smallest size is `%s` with %s bytes.
+    Smallest size is `%s` with %s characters.
     Worst speed is `%s` with %.3f sec.
-    Largest size is `%s` with %s bytes.
+    Largest size is `%s` with %s characters.
     ----- ----- -----\n''' % \
-        ( fname, splitthousands(L),
+        ( f, splitthousands(L),
         inv_SPEEDs[min(SPEEDs.values())], min(SPEEDs.values()),
         inv_SIZEs[min(SIZEs.values())], splitthousands(min(SIZEs.values())),
         inv_SPEEDs[max(SPEEDs.values())], max(SPEEDs.values()),
