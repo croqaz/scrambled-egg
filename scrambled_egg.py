@@ -15,8 +15,10 @@ import base64
 import json
 import hashlib
 import bz2, zlib
+import tarfile
 
 from collections import OrderedDict
+from cStringIO import StringIO
 from Padding import appendPadding, removePadding
 from pbkdf2 import PBKDF2
 
@@ -70,6 +72,47 @@ def findg(g):
     for i in g:
         if i: return ''.join(i.split())
 
+#
+
+class Attachments():
+
+    def __init__(self):
+
+        self.io = StringIO()
+        self.tar = tarfile.open('/attachment', mode='w', fileobj=self.io)
+
+    def removeFile(self, nameToDelete):
+        '''
+        Remove nameToDelete from tarfile.
+        '''
+        io_new = StringIO()
+        original = tarfile.open('/attachment', mode='r', fileobj=self.io)
+        modified = tarfile.open('/attachment', mode='w', fileobj=io_new)
+
+        for info in self.tar.getmembers():
+            if info.name.lower() == nameToDelete.lower():
+                continue
+            extracted = original.extractfile(info)
+            if not extracted:
+                continue
+            modified.addfile(info, extracted)
+
+        original.close()
+        del original
+        # The new IO and TAR.
+        self.io = io_new
+        self.tar = modified
+
+    def addFile(self, tarInfo, fileObj):
+
+        if not tarInfo.name in self.tar.getnames():
+            self.tar.addfile(tarInfo, fileObj)
+
+    def list(self):
+
+        return self.tar.getnames()
+
+#
 
 class ScrambledEgg():
 
@@ -688,6 +731,55 @@ class Container(QtGui.QWidget):
 
 #
 
+class AttachWindow(QtGui.QDialog):
+
+    def __init__(self, parent):
+        '''
+        Attachments dialog.
+        '''
+        super(AttachWindow, self).__init__(parent)
+        self.attach = parent.attach
+        self.setWindowTitle('Attachments')
+        self.setWhatsThis('Add or remove attachments')
+        self.resize(340, 355)
+
+        self.table = QtGui.QTableWidget(self)
+        self.table.cellClicked.connect(self.onDelete)
+        self.table.setColumnCount(2)
+        self.table.setHorizontalHeaderItem(0, QtGui.QTableWidgetItem('Attachment'))
+        self.table.setHorizontalHeaderItem(1, QtGui.QTableWidgetItem('Del'))
+        self.table.setColumnWidth(0, 255)
+        self.table.setColumnWidth(1, 30)
+        self.setupTable()
+
+        layout = QtGui.QVBoxLayout(self)
+        self.setLayout(layout)
+        layout.addWidget(self.table)
+
+    def setupTable(self):
+        # Re-init all table data.
+        O = self.attach.list()
+        L = len(O)
+
+        self.table.clear()
+        self.table.setRowCount(L)
+
+        for i in range(L):
+            self.table.setItem(i, 0, QtGui.QTableWidgetItem(O[i]))
+            self.table.setItem(i, 1, QtGui.QTableWidgetItem('--'))
+            self.table.item(i, 1).setTextAlignment(QtCore.Qt.AlignHCenter|QtCore.Qt.AlignVCenter)
+
+    def onDelete(self, row, column):
+        # Delete file from tar archive.
+        f = self.table.item(row, 0).text()
+        msg = QtGui.QMessageBox.warning(self, 'Delete file ? ...',
+            'Are you sure you want to delete "%s" ?' % f, 'Yes', 'No')
+        if msg == 0:
+            self.attach.removeFile(f)
+            self.setupTable()
+
+#
+
 class Window(QtGui.QMainWindow):
 
     def __init__(self):
@@ -708,7 +800,9 @@ class Window(QtGui.QMainWindow):
         self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
         self.setWindowOpacity(0.9)
         self.setAcceptDrops(True)
+
         self.SE = ScrambledEgg()
+        self.attach = Attachments()
 
         self.centralWidget = Container(self) # Central Widget.
         self.setCentralWidget(self.centralWidget)
@@ -737,7 +831,8 @@ class Window(QtGui.QMainWindow):
         self.nrLettersL = QtGui.QLabel('', self.centralWidget)   # Left side.
         self.setFormatting = QtGui.QCheckBox('Formatted text', self.centralWidget) # Left side.
         self.showHTML = QtGui.QCheckBox('Show HTML', self.centralWidget) # Left side.
-        self.setTags = QtGui.QCheckBox('No tags', self.centralWidget) # Left side.
+        self.setTags = QtGui.QCheckBox('No tags', self.centralWidget)    # Left side.
+        self.attachButton = QtGui.QPushButton('@', self.centralWidget)   # Left side.
 
         self.preDecrypt = QtGui.QComboBox(self.centralWidget)    # Right side.
         self.comboDecrypt = QtGui.QComboBox(self.centralWidget)  # Right side.
@@ -746,8 +841,8 @@ class Window(QtGui.QMainWindow):
         self.lineRSAPathR = QtGui.QLineEdit(self.centralWidget)  # Right RSA Path line.
         self.checkPwdR = QtGui.QCheckBox('<- Pwd', self.centralWidget) # Right side.
         self.nrLettersR = QtGui.QLabel('', self.centralWidget)   # Right side.
-        self.loadFile = QtGui.QPushButton('Import', self.centralWidget) # Right side.
-        self.saveFile = QtGui.QPushButton('Export', self.centralWidget) # Right side.
+        self.loadFile = QtGui.QPushButton('Import', self.centralWidget)   # Right side.
+        self.saveFile = QtGui.QPushButton('Export', self.centralWidget)   # Right side.
         self.helpButton = QtGui.QPushButton('Help !', self.centralWidget) # Right side.
 
         self.minButton = QtGui.QPushButton(D['MIN_BTN_TXT'], self.centralWidget)
@@ -768,6 +863,7 @@ class Window(QtGui.QMainWindow):
         self.layout.addWidget(self.preProcess,          5, 2, 1, 1)
         self.layout.addWidget(self.comboCrypt,          5, 3, 1, 1)
         self.layout.addWidget(self.postProcess,         5, 4, 1, 1)
+        self.layout.addWidget(self.attachButton,        5, 6, 1, 1)
         self.layout.addWidget(self.preDecrypt,          5, 7, 1, 1)
         self.layout.addWidget(self.comboDecrypt,        5, 8, 1, 1)
         self.layout.addWidget(self.postDecrypt,         5, 9, 1, 1)
@@ -860,6 +956,10 @@ class Window(QtGui.QMainWindow):
         self.buttonBrowseRSAR.setMaximumWidth(60)
         self.buttonBrowseRSAR.setDisabled(True)
 
+        # Attach button.
+        self.attachButton.setMaximumWidth(25)
+        self.attachButton.setStyleSheet(D['STYLE_BUTTON'])
+
         # Formatted text.
         self.setFormatting.setTristate(False)
         self.setFormatting.setToolTip('Encrypt this text as HTML')
@@ -938,6 +1038,7 @@ class Window(QtGui.QMainWindow):
         self.comboDecrypt.currentIndexChanged.connect(self.onRightTextChanged)
         self.postDecrypt.currentIndexChanged.connect(self.onRightTextChanged)
         #
+        self.attachButton.clicked.connect(self.onAttachments)
         self.saveFile.clicked.connect(self.onSave)
         self.loadFile.clicked.connect(self.onLoad)
         self.helpButton.clicked.connect(self.onHelp)
@@ -980,7 +1081,16 @@ class Window(QtGui.QMainWindow):
             uris = str(uri).split('\r\n')[:-1]
             # List of dragged files.
             for url in uris:
-                print urllib.urlopen(url)
+                #
+                f_name = urllib.unquote(url)
+                # Ignore windows shortcuts.
+                if os.path.splitext(f_name)[1].lower() == '.lnk':
+                    continue
+                o = urllib.urlopen(url)
+                t = tarfile.TarInfo(os.path.split(f_name)[1])
+                self.attach.addFile(t, o)
+                print self.attach.list()
+                #
         #
 
     def browseRSAkey(self):
@@ -1230,6 +1340,12 @@ class Window(QtGui.QMainWindow):
             self.textBar.setText(self.SE.error)
         #
 
+    def onAttachments(self):
+        #
+        dlg = AttachWindow(self)
+        dlg.exec_()
+        #
+
     def onSave(self):
         #
         # Save all pre/enc/post operations.
@@ -1375,7 +1491,34 @@ def loadThemes():
 
 #
 
+def commandLine():
+
+    import optparse
+    usage = "usage: %prog --input ifile [--output ofile] --pre PRE --enc ENC --post POST"
+    version="%prog v1.0"
+    description = '''Scrambled-Egg v1.0 command line. 
+Compress, encrypt and encode your file in command line. 
+* pre  - can be one of the values: ROT13, ZLIB, BZ2, None ; 
+* enc  - can be one of : AES, Blowfish, ARC2, CAST, DES3, RSA, None ; 
+* post - can be one of : Base64, Base32, HEX, Quopri, StringEscape, UU, Json, XML.
+'''
+
+    parser = optparse.OptionParser(usage=usage, version=version, description=description)
+    parser.add_option("-i", "--input", action="store", help="input file path")
+    parser.add_option("-o", "--output", action="store", help="output file path")
+    parser.add_option("-1", "--pre", action="store_const", help="pre encryption operation")
+    parser.add_option("-2", "--enc", action="store_const", help="encryption operation")
+    parser.add_option("-3", "--post", action="store_const", help="post encryption operation")
+    (options, args) = parser.parse_args()
+
+    print options, args
+
+#
+
 if __name__ == '__main__':
+
+    if sys.argv[1:]:
+        exit(commandLine())
 
     C = loadConfig()
     D = loadThemes()
@@ -1383,6 +1526,7 @@ if __name__ == '__main__':
     window = Window()
     window.show()
     sys.exit(app.exec_())
+
 #
 # Eof()
 #
