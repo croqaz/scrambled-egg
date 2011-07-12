@@ -13,7 +13,6 @@ import urllib
 import binascii as ba
 import base64
 import json
-import hashlib
 import bz2, zlib
 import tarfile
 
@@ -354,7 +353,7 @@ class ScrambledEgg():
             try: txt = ba.a2b_hex(txt)
             except: self.__error(1, pre, enc, post) ; return
         elif pre == 'Quopri Codec' or pre == ENCODE_D['Quopri Codec']:
-            try: txt = ba.a2b_qp(q_txt, header=True)
+            try: txt = ba.a2b_qp(txt, header=True)
             except: self.__error(1, pre, enc, post) ; return
         elif pre == 'String Escape' or pre == ENCODE_D['String Escape']:
             try: txt = txt.decode('string_escape')
@@ -509,7 +508,7 @@ class ScrambledEgg():
                     if len(list_val) >= 2:
                         _a = _int(list_val.pop()+list_val.pop(), 16)
                     elif len(list_val) == 1:
-                        _a = __int(list_val.pop(), 16)
+                        _a = _int(list_val.pop(), 16)
                     #
                     _pix(j, i, _rgba(_r, _g, _b, _a))
                     #
@@ -706,13 +705,13 @@ class ScrambledEgg():
 
 #
 
-class Container(QtGui.QWidget):
+class ContainerWidget(QtGui.QWidget):
 
     def __init__(self, parent):
         '''
         The main container. It's not transparent.
         '''
-        super(Container, self).__init__(parent)
+        super(ContainerWidget, self).__init__(parent)
         self.mMoving = False
         self.setMouseTracking(False)
         self.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Maximum, QtGui.QSizePolicy.Maximum))
@@ -805,9 +804,9 @@ class Window(QtGui.QMainWindow):
         self.SE = ScrambledEgg()
         self.attach = Attachments()
 
-        self.centralWidget = Container(self) # Central Widget.
+        self.centralWidget = ContainerWidget(self) # Central Widget.
         self.setCentralWidget(self.centralWidget)
-        self.container = QtGui.QWidget(self.centralWidget) # Container.
+        self.container = QtGui.QWidget(self.centralWidget) # Container Widget.
         self.container.setObjectName('Container')
         self.container.setStyleSheet(D['STYLE_CONTAINER'])
 

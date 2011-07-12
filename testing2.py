@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 
 import os, shutil
 from time import clock
