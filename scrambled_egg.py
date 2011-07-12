@@ -38,7 +38,6 @@ from PyQt4 import QtGui
 
 # TODO for next versions:
 # File attachments in encryption, like attachments in an email.
-# Drag and drop files in the GUI.
 # Command line to encrypt/ decrypt.
 # Daemon to watch for files in folders and encrypt them.
 
@@ -79,15 +78,15 @@ class Attachments():
     def __init__(self):
 
         self.io = StringIO()
-        self.tar = tarfile.open('/attachment', mode='w', fileobj=self.io)
+        self.tar = tarfile.open('/attachment', mode='w', format=tarfile.PAX_FORMAT, fileobj=self.io)
 
     def removeFile(self, nameToDelete):
         '''
         Remove nameToDelete from tarfile.
         '''
         io_new = StringIO()
-        original = tarfile.open('/attachment', mode='r', fileobj=self.io)
-        modified = tarfile.open('/attachment', mode='w', fileobj=io_new)
+        original = tarfile.open('/attachment', mode='r', format=tarfile.PAX_FORMAT, fileobj=self.io)
+        modified = tarfile.open('/attachment', mode='w', format=tarfile.PAX_FORMAT, fileobj=io_new)
 
         for info in self.tar.getmembers():
             if info.name.lower() == nameToDelete.lower():
@@ -107,6 +106,8 @@ class Attachments():
 
         if not tarInfo.name in self.tar.getnames():
             self.tar.addfile(tarInfo, fileObj)
+
+        print 'length:', len(self.io.getvalue())
 
     def list(self):
 
@@ -746,10 +747,6 @@ class AttachWindow(QtGui.QDialog):
         self.table = QtGui.QTableWidget(self)
         self.table.cellClicked.connect(self.onDelete)
         self.table.setColumnCount(2)
-        self.table.setHorizontalHeaderItem(0, QtGui.QTableWidgetItem('Attachment'))
-        self.table.setHorizontalHeaderItem(1, QtGui.QTableWidgetItem('Del'))
-        self.table.setColumnWidth(0, 255)
-        self.table.setColumnWidth(1, 30)
         self.setupTable()
 
         layout = QtGui.QVBoxLayout(self)
@@ -758,11 +755,15 @@ class AttachWindow(QtGui.QDialog):
 
     def setupTable(self):
         # Re-init all table data.
+        self.table.clear()
         O = self.attach.list()
         L = len(O)
 
-        self.table.clear()
         self.table.setRowCount(L)
+        self.table.setHorizontalHeaderItem(0, QtGui.QTableWidgetItem('Attachment'))
+        self.table.setHorizontalHeaderItem(1, QtGui.QTableWidgetItem('Del'))
+        self.table.setColumnWidth(0, 255)
+        self.table.setColumnWidth(1, 30)
 
         for i in range(L):
             self.table.setItem(i, 0, QtGui.QTableWidgetItem(O[i]))
@@ -1087,10 +1088,22 @@ class Window(QtGui.QMainWindow):
                 if os.path.splitext(f_name)[1].lower() == '.lnk':
                     continue
                 o = urllib.urlopen(url)
+                sz = os.fstat(o.fileno())[6]
                 t = tarfile.TarInfo(os.path.split(f_name)[1])
+                t.size = sz
                 self.attach.addFile(t, o)
-                print self.attach.list()
                 #
+
+        l = self.attach.list()
+        if not l:
+            self.attachButton.setText('@')
+            self.attachButton.setToolTip('Zero attachments')
+        elif l==1:
+            self.attachButton.setText('1 @')
+            self.attachButton.setToolTip('1 attachment')
+        else:
+            self.attachButton.setText('%i @' % len(l))
+            self.attachButton.setToolTip('%i attachments' % len(l))
         #
 
     def browseRSAkey(self):
@@ -1344,6 +1357,17 @@ class Window(QtGui.QMainWindow):
         #
         dlg = AttachWindow(self)
         dlg.exec_()
+
+        l = self.attach.list()
+        if not l:
+            self.attachButton.setText('@')
+            self.attachButton.setToolTip('Zero attachments')
+        elif l==1:
+            self.attachButton.setText('1 @')
+            self.attachButton.setToolTip('1 attachment')
+        else:
+            self.attachButton.setText('%i @' % len(l))
+            self.attachButton.setToolTip('%i attachments' % len(l))
         #
 
     def onSave(self):
