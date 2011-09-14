@@ -958,6 +958,7 @@ class Window(QtGui.QMainWindow):
 
         # Attach button.
         self.attachButton.setMaximumWidth(25)
+        self.attachButton.setToolTip('Zero attachments')
         self.attachButton.setStyleSheet(D['STYLE_BUTTON'])
 
         # Formatted text.
@@ -1184,6 +1185,7 @@ class Window(QtGui.QMainWindow):
         txt = txt.replace(' -qt-block-indent:0;', '')
         txt = txt.replace(' text-indent:0px;', '')
         txt = txt.replace(' style=""', '') # Delete empty style.
+        txt = txt.replace('<', '&lt;')
         return txt.strip()
         #
 
@@ -1496,7 +1498,7 @@ def loadThemes():
         print 'Cannot load theme: `%s` ! Using builtin theme !' % theme_path
 
     D['STYLE_MAIN']         = D.get('STYLE_MAIN', "QMainWindow {background:transparent;}")
-    D['STYLE_CONTAINER']    = D.get('STYLE_CONTAINER',   "#Container {background:white; border:3px solid grey; border-radius:11px;}")
+    D['STYLE_CONTAINER']    = D.get('STYLE_CONTAINER',   "#ContainerWidget {background:white; border:3px solid grey; border-radius:11px;}")
     D['STYLE_BUTTON']       = D.get('STYLE_BUTTON',      "QPushButton {color:#2E2633; background-color:#E1EDB9;} QPushButton:checked {color:#555152; background-color:#F3EFEE;} QPushButton:disabled {background-color:#EFEBE7;} QPushButton::hover {color:#99173C;}")
     D['TXT_BAR_OK']         = D.get('TXT_BAR_OK',  "color:blue")
     D['TXT_BAR_BAD']        = D.get('TXT_BAR_BAD', "color:red")
@@ -1517,24 +1519,41 @@ def loadThemes():
 def commandLine():
 
     import optparse
-    usage = "usage: %prog --input ifile [--output ofile] --pre PRE --enc ENC --post POST"
+    usage = "usage: %prog --input in_file [--output out_file] --pre PRE --enc ENC --post POST"
     version="%prog v1.0"
     description = '''Scrambled-Egg v1.0 command line. 
 Compress, encrypt and encode your file in command line. 
 * pre  - can be one of the values: ROT13, ZLIB, BZ2, None ; 
-* enc  - can be one of : AES, Blowfish, ARC2, CAST, DES3, RSA, None ; 
-* post - can be one of : Base64, Base32, HEX, Quopri, StringEscape, UU, Json, XML.
+* enc  - can be one of : AES, Blowfish, ARC2, CAST, DES3, RSA ; 
+* post - can be one of : Base64, Base32, HEX, StringEscape, UU, Json, XML.
 '''
 
     parser = optparse.OptionParser(usage=usage, version=version, description=description)
     parser.add_option("-i", "--input", action="store", help="input file path")
     parser.add_option("-o", "--output", action="store", help="output file path")
-    parser.add_option("-1", "--pre", action="store_const", help="pre encryption operation")
-    parser.add_option("-2", "--enc", action="store_const", help="encryption operation")
-    parser.add_option("-3", "--post", action="store_const", help="post encryption operation")
+    parser.add_option("--pre", action="store",  help="pre encryption operation")
+    parser.add_option("-e", "--enc", action="store", help="encryption operation")
+    parser.add_option("--post", action="store", help="post encryption operation")
     (options, args) = parser.parse_args()
 
-    print options, args
+    print args
+    print options
+    print
+
+    if not options.output:
+        options.output = 'output.dat'
+
+    if not options.input:
+        print('Must specify an input file ! Exiting !')
+        return 1
+
+    if not options.enc:
+        print('Must specify an encryption mode ! Exiting !')
+        return 1
+
+    pre =  ('None', 'ROT13', 'ZLIB', 'BZ2')
+    enc =  ('AES', 'Blowfish', 'ARC2', 'CAST', 'DES3', 'RSA')
+    post = ('Base64', 'Base32', 'HEX', 'StringEscape', 'UU', 'Json', 'XML')
 
 #
 
