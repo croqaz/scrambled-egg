@@ -106,7 +106,7 @@ class Attachments():
         if not tarInfo.name in self.tar.getnames():
             self.tar.addfile(tarInfo, fileObj)
 
-        print 'length:', len(self.io.getvalue())
+        print 'length of attach:', len(self.io.getvalue())
 
     def list(self):
 
@@ -743,7 +743,7 @@ class AttachWindow(QtGui.QDialog):
         super(AttachWindow, self).__init__(parent)
         self.attach = parent.attach
         self.setWindowTitle('Attachments')
-        self.setWhatsThis('Add or remove attachments')
+        self.setWhatsThis('Add or remove attachments using DRAG & DROP')
         self.resize(340, 355)
 
         self.table = QtGui.QTableWidget(self)
@@ -773,10 +773,13 @@ class AttachWindow(QtGui.QDialog):
             self.table.item(i, 1).setTextAlignment(QtCore.Qt.AlignHCenter|QtCore.Qt.AlignVCenter)
 
     def onDelete(self, row, column):
+        # If it's the 2nd column.
+        if column != 1: return
         # Delete file from tar archive.
         f = self.table.item(row, 0).text()
         msg = QtGui.QMessageBox.warning(self, 'Delete file ? ...',
-            'Are you sure you want to delete "%s" ?' % f, 'Yes', 'No')
+            'Are you sure you want to delete "%s" ?' % f,
+            QtGui.QMessageBox.Yes|QtGui.QMessageBox.No, QtGui.QMessageBox.No)
         if msg == 0:
             self.attach.removeFile(f)
             self.setupTable()
@@ -1107,6 +1110,10 @@ class Window(QtGui.QMainWindow):
         else:
             self.attachButton.setText('%i @' % len(l))
             self.attachButton.setToolTip('%i attachments' % len(l))
+        #
+        
+        print 'I should encrypt on DROP!'
+        
         #
 
     def browseRSAkey(self):

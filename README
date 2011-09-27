@@ -87,7 +87,7 @@
  = Version 0.5 brings the following changes :=
   * themes. You can implement your own themes in config/themes. The theme file
     must be in JSON format;
-  * config file. You can change the theme, width and height;
+  * config file. You can change the theme, the width and height;
   * command line;
   * attachments.
 
