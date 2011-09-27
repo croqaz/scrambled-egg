@@ -300,36 +300,39 @@ class ScrambledEgg():
 
     def decrypt(self, txt, pre, enc, post, pwd):
         #
-        # Trying to identify and/or delete pre/enc/post tags.
-        try:
-            re_groups = re.search(NO_TAGS, txt).groups()
-            tags = findg(re_groups)
+        if not (pre and enc and post):
+            # Trying to identify and/or delete pre/enc/post tags.
+            try:
+                re_groups = re.search(NO_TAGS, txt).groups()
+                tags = findg(re_groups)
 
-            # If Json.
-            if tags.startswith('"pre"'):
-                pre = 'Json'
-                enc = re.search('"enc":"([0-9a-zA-Z ]{1,3})"', tags).group(1)
-                post = re.search('"pre":"([0-9a-zA-Z ]{1,3})"', tags).group(1)
-                txt = re.search('"data":\s*"(.+?)"', txt, re.S).group(1)
+                # If Json.
+                if tags.startswith('"pre"'):
+                    pre = 'Json'
+                    enc = re.search('"enc":"([0-9a-zA-Z ]{1,3})"', tags).group(1)
+                    post = re.search('"pre":"([0-9a-zA-Z ]{1,3})"', tags).group(1)
+                    txt = re.search('"data":\s*"(.+?)"', txt, re.S).group(1)
 
-            # If XML.
-            elif tags.startswith('<pre>'):
-                pre = 'XML'
-                enc = re.search('<enc>([0-9a-zA-Z ]{1,3})</enc>', tags).group(1)
-                post = re.search('<pre>([0-9a-zA-Z ]{1,3})</pre>', tags).group(1)
-                txt = re.search('<data>(.+)</data>', txt, re.S).group(1)
+                # If XML.
+                elif tags.startswith('<pre>'):
+                    pre = 'XML'
+                    enc = re.search('<enc>([0-9a-zA-Z ]{1,3})</enc>', tags).group(1)
+                    post = re.search('<pre>([0-9a-zA-Z ]{1,3})</pre>', tags).group(1)
+                    txt = re.search('<data>(.+)</data>', txt, re.S).group(1)
 
-            else:
-                pre = tags.split(':')[2]
-                enc = tags.split(':')[1]
-                post = tags.split(':')[0]
-                txt = re.sub(NO_TAGS, '', txt)
+                else:
+                    pre = tags.split(':')[2]
+                    enc = tags.split(':')[1]
+                    post = tags.split(':')[0]
+                    txt = re.sub(NO_TAGS, '', txt)
 
-            self.pre = pre
-            self.enc = enc
-            self.post = post
-        except:
-            pass
+                self.pre = pre
+                self.enc = enc
+                self.post = post
+            except:
+                pass
+        else:
+            txt = re.sub(NO_TAGS, '', txt)
         #
         # Check RSA key path.
         if enc == 'RSA' and not os.path.exists(self.rsa_path):
@@ -814,8 +817,8 @@ class Window(QtGui.QMainWindow):
         self.layout = QtGui.QGridLayout(self.centralWidget) # Main Layout.
         self.centralWidget.setLayout(self.layout)
 
-        self.leftText = QtGui.QTextEdit(' ', self.centralWidget)        # To write clean text.
-        self.rightText = QtGui.QPlainTextEdit(' ' , self.centralWidget) # To view encrypted text.
+        self.leftText = QtGui.QTextEdit('', self.centralWidget)        # To write clean text.
+        self.rightText = QtGui.QPlainTextEdit('' , self.centralWidget) # To view encrypted text.
 
         self.buttonCryptMode = QtGui.QPushButton(self.centralWidget)
         self.buttonDecryptMode = QtGui.QPushButton(self.centralWidget)
@@ -1292,6 +1295,8 @@ class Window(QtGui.QMainWindow):
                 pre = 'XML'
                 enc = re.search('<enc>([0-9a-zA-Z ]{1,3})</enc>', tags).group(1)
                 post = re.search('<pre>([0-9a-zA-Z ]{1,3})</pre>', tags).group(1)
+            else:
+                pre=None ; enc=None ; post=None
 
             # Identify the rest.
             if not pre:
@@ -1529,31 +1534,59 @@ Compress, encrypt and encode your file in command line.
 '''
 
     parser = optparse.OptionParser(usage=usage, version=version, description=description)
-    parser.add_option("-i", "--input", action="store", help="input file path")
+    parser.add_option("-i", "--input",  action="store", help="input file path")
     parser.add_option("-o", "--output", action="store", help="output file path")
-    parser.add_option("--pre", action="store",  help="pre encryption operation")
-    parser.add_option("-e", "--enc", action="store", help="encryption operation")
-    parser.add_option("--post", action="store", help="post encryption operation")
+    parser.add_option("-p", "--pwd",    action="store", help="password used for encryption")
+    parser.add_option("--pre",          action="store", help="pre operation    (compress, default=None)")
+    parser.add_option("-e", "--enc",    action="store", help="encryption operation  (default=AES)")
+    parser.add_option("--post",         action="store", help="post operation   (encode, default=Base64)")
     (options, args) = parser.parse_args()
-
-    print args
-    print options
-    print
 
     if not options.output:
         options.output = 'output.dat'
+
+    if not options.enc:
+        options.enc = 'AES'
+
+    if not options.pre:
+        options.pre = 'None'
+
+    if not options.post:
+        options.post = 'Base64'
 
     if not options.input:
         print('Must specify an input file ! Exiting !')
         return 1
 
-    if not options.enc:
-        print('Must specify an encryption mode ! Exiting !')
+    if not os.path.exists(options.input):
+        print('The file `%s` doesn\'t exist ! Exiting !' % options.input)
         return 1
 
-    pre =  ('None', 'ROT13', 'ZLIB', 'BZ2')
-    enc =  ('AES', 'Blowfish', 'ARC2', 'CAST', 'DES3', 'RSA')
-    post = ('Base64', 'Base32', 'HEX', 'StringEscape', 'UU', 'Json', 'XML')
+    if not options.pwd:
+        print('Must specify a password ! Exiting !')
+        return 1
+
+    pre =  {'NONE':'None', 'ROT13':'ROT13', 'ZLIB':'ZLIB', 'BZ2':'BZ2'}
+    enc =  {'AES':'AES', 'BLOWFISH':'Blowfish', 'ARC2':'ARC2', 'CAST':'CAST', 'DES3':'DES3', 'RSA':'RSA'}
+    post = {'BASE64':'Base64 Codec', 'BASE32':'Base32 Codec', 'HEX':'HEX Codec', 'STRINGESCAPE':'String Escape', 'UU':'UU Codec', 'JSON':'Json', 'XML':'XML'}
+
+    if options.enc.upper() not in enc:
+        print('Value `%s` is an invalid encryption operation ! Exiting !' % options.enc)
+        return 1
+
+    if options.pre.upper() not in pre:
+        print('Value `%s` is an invalid pre operation ! Exiting !' % options.pre)
+        return 1
+
+    if options.post.upper() not in post:
+        print('Value `%s` is an invalid post operation ! Exiting !' % options.post)
+        return 1
+
+    SE = ScrambledEgg()
+    val = SE.encrypt(open(options.input,'rb').read(),
+        pre[options.pre.upper()], enc[options.enc.upper()], post[options.post.upper()],
+        options.pwd, tags=True)
+    open(options.output,'w').write(val)
 
 #
 
