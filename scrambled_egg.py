@@ -9,6 +9,7 @@
 import os, sys
 import re, math
 import string
+import struct
 import urllib
 import binascii as ba
 import base64
@@ -34,6 +35,9 @@ sip.setapi('QVariant', 2)
 
 from PyQt4 import QtCore
 from PyQt4 import QtGui
+
+try: import Image
+except: Image = None
 
 # TODO for next versions:
 # File attachments in encryption, like attachments in an email.
@@ -421,14 +425,17 @@ class ScrambledEgg():
         HEX encoding is `high density`. Two letters are transformed into a color from 1 to 255,
         so one pixel consists of 8 letters, instead of 4 letters.
         '''
-        #
+
+        if not pre: pre = 'None'
+        if not enc: enc = 'None'
+        if post not in ('HEX Codec', 'Base32 Codec', 'Base64 Codec'):
+            print 'Encoding must be HEX, Base32, or Base64! Exiting!'
+            return
+
         # Input can be string, or file. If's file, read it.
         if str(type(txt)) == "<type 'file'>":
             txt.seek(0)
             txt = txt.read()
-
-        # Strip pre/enc/post tags.
-        txt = re.sub(NO_TAGS, '', txt)
 
         # All text must be reversed, to pop from the end of the characters list.
         if encrypt: # If text MUST be encrypted first, encrypt without pre/enc/post tags.
@@ -436,7 +443,10 @@ class ScrambledEgg():
             if not val:
                 return
         else: # Else, the text is already encrypted.
+            # Strip pre/enc/post tags.
+            txt = re.sub(NO_TAGS, '', txt)
             val = txt[::-1]
+            del txt
 
         # Calculate the edge of the square and blank square.
         if post == 'HEX Codec':
@@ -453,7 +463,7 @@ class ScrambledEgg():
         # `Second pixel` : a number representing the length of valid characters.
         # This is only used for HEX, because when decrypting, this number of letters is trimmed from the end of the string.
         if post == 'HEX Codec':
-            second_pixel = str(QtGui.QColor(int(blank)).name())[3:]
+            second_pixel = struct.pack('BB', int(blank/255), (blank%256)).encode('hex')
             val += second_pixel[::-1]
             #print '! Second pixel', second_pixel
             del second_pixel
@@ -476,16 +486,22 @@ class ScrambledEgg():
         list_val = list(val)
         # Creating new square image.
         print('Creating img, %ix%i, blank : %i, string to encode : %i chars.' % (edge, edge, blank, len(val)))
-        im = QtGui.QImage(edge, edge, QtGui.QImage.Format_ARGB32)
-        _pix = im.setPixel
-        _rgba = QtGui.qRgba
+
+        edge = int(edge)
+        if not Image:
+            im = QtGui.QImage(edge, edge, QtGui.QImage.Format_ARGB32)
+            _pix = im.setPixel
+            _rgba = QtGui.qRgba
+        else:
+            im = Image.new('RGBA', (edge, edge))
+            _pix = im.load()
         _int = int
         _ord = ord
 
         # HEX codec.
         if post == 'HEX Codec':
-            for i in range(int(edge)):
-                for j in range(int(edge)):
+            for i in range(edge):
+                for j in range(edge):
                     #
                     _r = _g = _b = _a = 255
 
@@ -513,17 +529,25 @@ class ScrambledEgg():
                     elif len(list_val) == 1:
                         _a = _int(list_val.pop(), 16)
                     #
-                    _pix(j, i, _rgba(_r, _g, _b, _a))
+                    if not Image:
+                        _pix(j, i, _rgba(_r, _g, _b, _a))
+                    else:
+                        _pix[j, i] = (_r, _g, _b, _a)
                     #
 
         # Base 64 and Base 32.
         else:
-            for i in range(int(edge)):
-                for j in range(int(edge)):
+            for i in range(edge):
+                for j in range(edge):
                     #
                     if blank:
                         blank -= 1
-                        _pix(j, i, _rgba(255, 255, 255, 255))
+                        # Put one #FFFFFFFF, completely white pixel.
+                        if not Image:
+                            _pix(j, i, 4294967295L)
+                        else:
+                            _pix[j, i] = (255,255,255,255)
+                        
                         continue
                     #
                     _r = _g = _b = _a = 255
@@ -537,12 +561,16 @@ class ScrambledEgg():
                     if len(list_val) >= 1:
                         _a = _ord(list_val.pop())
 
-                    _pix(j, i, _rgba(_r, _g, _b, _a))
+                    if not Image:
+                        _pix(j, i, _rgba(_r, _g, _b, _a))
+                    else:
+                        _pix[j, i] = (_r, _g, _b, _a)
+                    
                     #
 
         #
         try:
-            im.save(path, 'PNG', -1)
+            im.save(path, 'PNG') #, -1)
         except:
             print('Cannot save PNG file "%s" !' % path)
         #
@@ -552,90 +580,140 @@ class ScrambledEgg():
         if not os.path.isfile(path):
             print('Cannot find file "%s" !' % path)
             return
-        #
+
         try:
-            im = QtGui.QImage()
-            im.load(path, 'PNG')
+            if not Image:
+                im = QtGui.QImage()
+                im.load(path, 'PNG')
+                W = im.width()
+                H = im.height()
+                _r = QtGui.qRed
+                _g = QtGui.qGreen
+                _b = QtGui.qBlue
+                _a = QtGui.qAlpha
+                _pix = im.pixel
+
+            else:
+                im = Image.open(path, 'r')
+                W = im.size[0] # Width
+                H = im.size[1] # Height
+                _pix = im.load()
+
         except:
             print('Image "%s" is not a valid RGBA PNG !' % path)
             return
 
-        list_val = []
-        _pix = im.pixel
-        _r = QtGui.qRed
-        _g = QtGui.qGreen
-        _b = QtGui.qBlue
-        _a = QtGui.qAlpha
-
         fp_val = 0
+        list_val = []
 
         # Calculate First Pixel.
-        for i in range(im.width()):
-            for j in range(im.height()):
+        for i in range(W):
+            for j in range(H):
                 #
                 if fp_val:
                     break
-                #
-                pix1 = _pix(j, i)
-                #
-                if pix1 != 4294967295L: # Color #FFFFFFFF, completely white pixel.
-                    fp_val = [_r(pix1), _g(pix1), _b(pix1), _a(pix1)]
-                    break
-                #
+
+                if not Image:
+                    #
+                    pix1 = _pix(j, i)
+                    # For QtColor
+                    if pix1 != 4294967295L: # Color #FFFFFFFF, completely white pixel.
+                        fp_val = [_r(pix1), _g(pix1), _b(pix1), _a(pix1)]
+                        break
+                    #
+                else:
+                    #
+                    pix1 = _pix[j, i]
+                    # For PIL Image
+                    if pix1 != (255,255,255,255):
+                        fp_val = pix1
+                        break
+                    #
 
         # Calculate the colors of first pixel.
         # For HEX: Red+Green represents pre/enc/post information and Blue+Alpha value represents nr of valid characters.
         # For Base64/ Base32, first pixel represents only the Pre/ Enc/ Post information.
-        cc = QtGui.QColor(fp_val[0], fp_val[1], fp_val[2], fp_val[3])
-        first_pixel_hex = cc.name()[1:5]
-        first_pixel_b = [chr(fp_val[0]), chr(fp_val[1]), chr(fp_val[2]), chr(fp_val[3])]
-        if cc.alpha() < 16:
-            blank = int(hex(cc.blue())[2:]+'0'+hex(cc.alpha())[2:], 16)
-        else:
-            blank = int(hex(cc.blue())[2:]+hex(cc.alpha())[2:], 16)
+        first_pixel_hex = struct.pack('BB', fp_val[0], fp_val[1]).encode('hex')
+        blank = int(struct.pack('BB', fp_val[2], fp_val[3]).encode('hex'), 16)
+        first_pixel_base = [chr(fp_val[0]), chr(fp_val[1]), chr(fp_val[2]), chr(fp_val[3])]
 
         # Reverse number dictionaries.
         reverse_s = dict(zip(SCRAMBLE_NR.values(), SCRAMBLE_NR.keys()))
         reverse_ey = dict(zip(ENCRYPT_NR.values(), ENCRYPT_NR.keys()))
         reverse_ed = dict(zip(ENCODE_NR.values(), ENCODE_NR.keys()))
 
-        if first_pixel_hex[0] == '0' and first_pixel_b[0] != '0':
+        if first_pixel_hex[0] == '0' and first_pixel_base[0] != '0':
             post = reverse_s[first_pixel_hex[1]]
             enc = reverse_ey[first_pixel_hex[2]]
             pre = reverse_ed[first_pixel_hex[3]]
         else:
-            post = reverse_s[first_pixel_b[1]]
-            enc = reverse_ey[first_pixel_b[2]]
-            pre = reverse_ed[first_pixel_b[3]]
+            post = reverse_s[first_pixel_base[1]]
+            enc = reverse_ey[first_pixel_base[2]]
+            pre = reverse_ed[first_pixel_base[3]]
 
         # Save Pre/ Enc/ Post information for GUI.
         self.pre = pre
         self.enc = enc
         self.post = post
 
-        # For HEX.
-        if pre == 'HEX Codec':
-            for i in range(im.width()):
-                for j in range(im.height()):
+        # For HEX and PyQt.
+        if pre == 'HEX Codec' and not Image:
+            for i in range(W):
+                for j in range(H):
                     #
                     rgba = _pix(j, i)
                     #
-                    # For each channel in this pixel.
+                    # For each channel in current pixel.
                     for v in [_r(rgba), _g(rgba), _b(rgba), _a(rgba)]:
+                        # This is much faster than struct.pack('B',v).encode('hex')
+                        # I need 2 characters; in HEX 16=>10; less than 16 must have 0 in front of it.
                         if v < 16:
                             list_val.append('0'+hex(v)[-1])
                         else:
                             list_val.append(hex(v)[-2:])
                     #
 
-        # For the rest.
-        else:
-            for i in range(im.width()):
-                for j in range(im.height()):
+        # For HEX and PIL Image.
+        elif pre == 'HEX Codec':
+            for i in range(W):
+                for j in range(H):
+                    #
+                    rgba = _pix[j, i]
+                    #
+                    # For each channel in current pixel.
+                    for v in rgba:
+                        # I need 2 characters; in HEX 16=>10; less than 16 must have 0 in front of it.
+                        if v < 16:
+                            list_val.append('0'+hex(v)[-1])
+                        else:
+                            list_val.append(hex(v)[-2:])
+                    #
+
+        # For the rest, with PyQt.
+        elif not Image:
+            for i in range(W):
+                for j in range(H):
                     #
                     rgba = _pix(j, i)
                     #
+                    # For each channel in current pixel.
                     for v in [_r(rgba), _g(rgba), _b(rgba), _a(rgba)]:
+                        if v and v != 255:
+                            list_val.append(unichr(v))
+                        # If this color is 0 or 255, the rest of the pixel is blank.
+                        else:
+                            break
+                    #
+
+        # For the rest, with PIL Image.
+        else:
+            for i in range(W):
+                for j in range(H):
+                    #
+                    rgba = _pix[j, i]
+                    #
+                    # For each channel in current pixel.
+                    for v in rgba:
                         if v and v != 255:
                             list_val.append(unichr(v))
                         # If this color is 0 or 255, the rest of the pixel is blank.
@@ -654,7 +732,7 @@ class ScrambledEgg():
         #ff.write('\nColor: %s ; FP Val: %s ; FP Hex: %s ; FP B64/32: %s ; Blank: %i' % (cc.name(),str(fp_val),first_pixel_hex,''.join(first_pixel_b),blank))
         #ff.write('\n'+''.join(list_val)+'\n')
         #ff.write(''.join(list_val)[8:blank])
-        #ff.close() ; del ff, cc, fp_val
+        #ff.close() ; del ff, fp_val
 
         # If the text MUST be decrypted.
         if decrypt:
