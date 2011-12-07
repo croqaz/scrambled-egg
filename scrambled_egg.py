@@ -7,6 +7,7 @@
 # ---
 
 import os, sys
+import subprocess
 import re, math
 import string
 import struct
@@ -445,6 +446,10 @@ class ScrambledEgg():
         else: # Else, the text is already encrypted.
             # Strip pre/enc/post tags.
             txt = re.sub(NO_TAGS, '', txt)
+            # All information is reversed, because it's faster to just Pop from the end of a list,
+            # Rather then using Pop(0), from the beggining of a list.
+            # So the "first pixel" will be added at the end, but will be fetched first,
+            # When creating the final image.
             val = txt[::-1]
             del txt
 
@@ -1258,23 +1263,19 @@ class Window(QtGui.QMainWindow):
 
     def cleanupHtml(self, txt):
         #
-        txt = re.sub('''<span style="[0-9a-zA-Z "':;,-]+">([<>br/ ])</span>''', '', ' '.join(txt.split())) # Kill empty span.
-        txt = re.sub('''<p style="[0-9a-zA-Z "':;,-]+">[ ]?</p>''', '', txt) # Kill empty paragraphs.
-        txt = txt.replace('> <p style', '><p style')
-        txt = txt.replace('>  <p style', '><p style')
-        txt = txt.replace('</td> <td>', '</td><td>')
-        txt = txt.replace('</tr> <tr>', '</tr><tr>')
-        txt = txt.replace('</span> </p>', '</span></p>')
-        txt = txt.replace('</p> <p ', '</p>\n<p ')
-        txt = txt.replace(' margin-top:0px;', '') # Delete obsolete styles.
-        txt = txt.replace(' margin-bottom:0px;', '')
-        txt = txt.replace(' margin-left:0px;', '')
-        txt = txt.replace(' margin-right:0px;', '')
-        txt = txt.replace(' -qt-block-indent:0;', '')
-        txt = txt.replace(' text-indent:0px;', '')
-        txt = txt.replace(' style=""', '') # Delete empty style.
-        txt = txt.replace('<', '&lt;')
-        return txt.strip()
+        def spacerepl(matchobj):
+            return matchobj.group(0).replace(' ', '&nbsp;')
+
+        txt = re.sub('>([^<>]+)<(?!/style>)', spacerepl, txt)
+        open('doc.htm', 'wb').write(txt)
+
+        p = subprocess.Popen('tidy.exe ' + ' -config config.txt doc.htm', shell=False).wait()
+        txt = open('doc.htm', 'r').read()
+        txt = txt.replace('<title></title>\n', '')
+        txt = txt.replace('<meta name="generator" content="HTML Tidy for Windows (vers 25 March 2009), see www.w3.org">\n', '')
+        os.remove('doc.htm')
+
+        return txt
         #
 
     def toggleHtml(self):

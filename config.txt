@@ -1,0 +1,17 @@
+clean: yes
+bare: yes
+indent: no
+wrap: 0
+uppercase-tags: no
+uppercase-attributes: no
+quote-marks: yes
+quote-nbsp: yes
+join-classes: yes
+join-styles: yes
+merge-divs: yes
+merge-spans: yes
+doctype: omit
+output-html: yes
+
+write-back: yes
+quiet: yes
