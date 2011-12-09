@@ -12,12 +12,12 @@ import re, math
 import string
 import struct
 import urllib
-import binascii as ba
 import base64
 import json
 import bz2, zlib
 import tarfile
 
+import binascii as ba
 from collections import OrderedDict
 from cStringIO import StringIO
 from Padding import appendPadding, removePadding
@@ -43,7 +43,7 @@ except: Image = None
 # TODO for next versions:
 # File attachments in encryption, like attachments in an email.
 # Command line to encrypt/ decrypt.
-# Daemon to watch for files in folders and encrypt them.
+# Daemon to watch for files in folders and encrypt them, maybe?
 
 #
 ROT = string.maketrans('nopqrstuvwxyzabcdefghijklmNOPQRSTUVWXYZABCDEFGHIJKLM', 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
@@ -70,12 +70,16 @@ ENCODE_NR = {'Base64 Codec':'4', 'Base32 Codec':'2', 'HEX Codec':'1', 'Quopri Co
 C = {} # Config.
 D = {} # Themes.
 #
+__version__ = 'ver 0.5'
+#
 
 def findg(g):
     for i in g:
         if i: return ''.join(i.split())
 
-#
+# ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
+#       Tar  File  Attachments
+# ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
 
 class Attachments():
 
@@ -86,7 +90,7 @@ class Attachments():
 
     def removeFile(self, nameToDelete):
         '''
-        Remove nameToDelete from tarfile.
+        Remove file from archive. This is not implemented in python TAR lib.
         '''
         io_new = StringIO()
         original = tarfile.open('/attachment', mode='r', format=tarfile.PAX_FORMAT, fileobj=self.io)
@@ -107,17 +111,23 @@ class Attachments():
         self.tar = modified
 
     def addFile(self, tarInfo, fileObj):
-
+        '''
+        Adds file inside archive, using the info.
+        '''
         if not tarInfo.name in self.tar.getnames():
             self.tar.addfile(tarInfo, fileObj)
 
-        print 'length of attach:', len(self.io.getvalue())
+        print 'Length of attach:', len(self.io.getvalue())
 
     def list(self):
-
+        '''
+        Lists included file.
+        '''
         return self.tar.getnames()
 
-#
+# ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
+#       Scrambled-Egg  Encryption  Engine
+# ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
 
 class ScrambledEgg():
 
@@ -140,7 +150,7 @@ class ScrambledEgg():
             enc += ' (ERROR!)'
         elif step==3:
             post += ' (ERROR!)'
-        #
+
         if field=='R':
             self.error = '  Decryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post)
         else:
@@ -422,7 +432,8 @@ class ScrambledEgg():
         '''
         Any information, text and/or files, can be encoded inside a little PNG image. \n\
         Depending on how you encode the crypted data, images come in 3 flavors: HEX, Base32 and Base64. \n\
-        Normally each letter can be transformed into a color from 1 to 255 ; so 4 colors become one pixel. \n\
+        Normally each letter can be encoded inside a color value from 1 to 255,
+        and 4 colors become one RGBA pixel. \n\
         HEX encoding is `high density`. Two letters are transformed into a color from 1 to 255,
         so one pixel consists of 8 letters, instead of 4 letters.
         '''
@@ -552,7 +563,7 @@ class ScrambledEgg():
                             _pix(j, i, 4294967295L)
                         else:
                             _pix[j, i] = (255,255,255,255)
-                        
+
                         continue
                     #
                     _r = _g = _b = _a = 255
@@ -570,7 +581,7 @@ class ScrambledEgg():
                         _pix(j, i, _rgba(_r, _g, _b, _a))
                     else:
                         _pix[j, i] = (_r, _g, _b, _a)
-                    
+
                     #
 
         #
@@ -771,11 +782,11 @@ class ScrambledEgg():
             return
         #
         ext = os.path.splitext(fpath)[1].lower()
-        #
+
         # For PNG files.
         if ext=='.png':
             return self.fromImage(pwd, fpath, decrypt)
-        #
+
         # For the rest of the files.
         if decrypt:
             val = self.decrypt(open(fpath, 'rb').read(), pre, enc, post, pwd)
@@ -783,19 +794,23 @@ class ScrambledEgg():
                 print(self.error)
             else:
                 return val
+
         # Else, don't decrypt.
         else:
             val = open(fpath, 'rb').read()
             return val
         #
 
-#
+# ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
+#       GUI  Container  Widget
+# ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
 
 class ContainerWidget(QtGui.QWidget):
 
     def __init__(self, parent):
         '''
-        The main container. It's not transparent.
+        Main container. It's not transparent. \n\
+        I must use this, to accept file drops, as attachments.
         '''
         super(ContainerWidget, self).__init__(parent)
         self.mMoving = False
@@ -815,13 +830,16 @@ class ContainerWidget(QtGui.QWidget):
         if(event.button() == QtCore.Qt.LeftButton):
             self.mMoving = False
 
-#
+# ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
+#       GUI  Attachments  Window
+# ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
 
 class AttachWindow(QtGui.QDialog):
 
     def __init__(self, parent):
         '''
-        Attachments dialog.
+        Attachments dialog. \n\
+        This represents the attachments, visually, as a table.
         '''
         super(AttachWindow, self).__init__(parent)
         self.attach = parent.attach
@@ -859,15 +877,17 @@ class AttachWindow(QtGui.QDialog):
         # If it's the 2nd column.
         if column != 1: return
         # Delete file from tar archive.
-        f = self.table.item(row, 0).text()
+        item = self.table.item(row, 0).text()
         msg = QtGui.QMessageBox.warning(self, 'Delete file ? ...',
-            'Are you sure you want to delete "%s" ?' % f,
+            'Are you sure you want to delete "%s" ?' % item,
             QtGui.QMessageBox.Yes|QtGui.QMessageBox.No, QtGui.QMessageBox.No)
-        if msg == 0:
-            self.attach.removeFile(f)
+        if msg == QtGui.QMessageBox.Yes:
+            self.attach.removeFile(item)
             self.setupTable()
 
-#
+# ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
+#       MAIN  Scrambled-Egg  Window
+# ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
 
 class Window(QtGui.QMainWindow):
 
@@ -885,7 +905,7 @@ class Window(QtGui.QMainWindow):
         self.resize(C['W_WIDTH'], C['W_HEIGHT'])
         self.setMaximumHeight(C['W_MAX_HEIGHT'])
         self.setStyleSheet(D['STYLE_MAIN'])
-        self.setWindowTitle('Scrambled Egg :: Live Crypt')
+        self.setWindowTitle('Scrambled Egg %s :: Live Crypt' % __version__)
         self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
         self.setWindowOpacity(0.9)
         self.setAcceptDrops(True)
@@ -1173,7 +1193,7 @@ class Window(QtGui.QMainWindow):
             for url in uris:
                 #
                 f_name = urllib.unquote(url)
-                # Ignore windows shortcuts.
+                # Ignore windows shortcuts. They are ugly :)
                 if os.path.splitext(f_name)[1].lower() == '.lnk':
                     continue
                 o = urllib.urlopen(url)
@@ -1194,9 +1214,10 @@ class Window(QtGui.QMainWindow):
             self.attachButton.setText('%i @' % len(l))
             self.attachButton.setToolTip('%i attachments' % len(l))
         #
-        
+
         print 'I should encrypt on DROP!'
-        
+        print 'Total len:', len(self.attach.io.getvalue())
+
         #
 
     def browseRSAkey(self):
@@ -1532,7 +1553,7 @@ class Window(QtGui.QMainWindow):
 
     def onHelp(self):
         #
-        QtGui.QMessageBox.about(self.centralWidget, 'Scrambled Egg Help',
+        QtGui.QMessageBox.about(self.centralWidget, 'Scrambled Egg %s Help' % __version__,
             '<br><b>Copyright (C) 2010-2011</b> : Cristi Constantin. All rights reserved.<br>'
             '<b>Website</b> : http://scrambled-egg.googlecode.com/<br><br>'
             'Scrambled-Egg is a software designed for encrypting your sensitive data.<br>'
@@ -1612,10 +1633,10 @@ def commandLine():
     import optparse
     usage = "usage: %prog --input in_file [--output out_file] --pre PRE --enc ENC --post POST"
     version="%prog v1.0"
-    description = '''Scrambled-Egg v1.0 command line. 
-Compress, encrypt and encode your file in command line. 
-* pre  - can be one of the values: ROT13, ZLIB, BZ2, None ; 
-* enc  - can be one of : AES, Blowfish, ARC2, CAST, DES3, RSA ; 
+    description = '''Scrambled-Egg v1.0 command line.
+Compress, encrypt and encode your file in command line.
+* pre  - can be one of the values: ROT13, ZLIB, BZ2, None ;
+* enc  - can be one of : AES, Blowfish, ARC2, CAST, DES3, RSA ;
 * post - can be one of : Base64, Base32, HEX, StringEscape, UU, Json, XML.
 '''
 
