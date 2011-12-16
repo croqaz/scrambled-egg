@@ -214,19 +214,25 @@ class ScrambledEgg():
         return hash_key.read(key_size)
         #
 
-    def encrypt(self, txt, pre, enc, post, pwd, tags=True):
+    def encrypt(self, data, pre, enc, post, pwd, tags=True):
+        #
+        txt = data
+        #
+        if type(txt) != type([0,0]) and type(txt) != type((0,0)):
+            raise TypeError('Invalid data type for encryption: "%s" !' % str(type(txt)))
         #
         # Scramble operation.
-        if pre == 'None':
-            pass
-        elif pre == 'ZLIB':
-            txt = zlib.compress(txt)
-        elif pre == 'BZ2':
-            txt = bz2.compress(txt)
-        elif pre == 'ROT13':
-            txt = string.translate(txt, ROT)
-        else:
-            raise Exception('Invalid scramble "%s" !' % pre)
+        for nr in range(len(txt)):
+            if pre == 'None':
+                pass
+            elif pre == 'ZLIB':
+                txt[nr] = zlib.compress(txt[nr])
+            elif pre == 'BZ2':
+                txt[nr] = bz2.compress(txt[nr])
+            elif pre == 'ROT13':
+                txt[nr] = string.translate(txt[nr], ROT)
+            else:
+                raise Exception('Invalid scramble "%s" !' % pre)
         #
         # Check RSA key path.
         if enc == 'RSA' and not os.path.exists(self.rsa_path):
@@ -235,119 +241,139 @@ class ScrambledEgg():
             return
         #
         pwd = self._fix_password(pwd, enc)
-        txt = appendPadding(txt, blocksize=16)
         #
-        # Encryption operation.
         if enc == 'AES':
             o = AES.new(pwd, mode=2)
-            encrypted = o.encrypt(txt)
         elif enc == 'ARC2':
             o = ARC2.new(pwd, mode=2)
-            encrypted = o.encrypt(txt)
         elif enc == 'CAST':
             o = CAST.new(pwd, mode=2)
-            encrypted = o.encrypt(txt)
         elif enc == 'Blowfish':
             o = Blowfish.new(pwd, mode=2)
-            encrypted = o.encrypt(txt)
         elif enc == 'DES3':
             o = DES3.new(pwd, mode=2)
-            encrypted = o.encrypt(txt)
         elif enc == 'RSA':
             # Using Blowfish encryption for RSA.
             o = Blowfish.new(pwd, mode=3)
-            encrypted = o.encrypt(txt)
         elif not enc or enc == 'None':
-            encrypted = txt
+            o = None
         else:
             raise Exception('Invalid encryption mode "%s" !' % enc)
         #
+        # Encryption operation.
+        if o:
+            for nr in range(len(txt)):
+                temp = appendPadding(txt[nr], blocksize=16)
+                txt[nr] = o.encrypt(temp)
+        #
         # Codec operation.
-        if post == 'Base64 Codec':
-            if tags:
-                final = '<#>%s:%s:%s<#>%s' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec',''), ba.b2a_base64(encrypted))
+        for nr in range(len(txt)):
+            if post == 'Base64 Codec':
+                if tags:
+                    txt[nr] = '<#>%s:%s:%s<#>%s' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec',''), ba.b2a_base64(txt[nr]))
+                else:
+                    txt[nr] = ba.b2a_base64(txt[nr])
+            elif post == 'Base32 Codec':
+                if tags:
+                    txt[nr] = '<#>%s:%s:%s<#>%s' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec',''), base64.b32encode(txt[nr]))
+                else:
+                    txt[nr] = base64.b32encode(txt[nr])
+            elif post == 'HEX Codec':
+                if tags:
+                    txt[nr] = '<#>%s:%s:%s<#>%s' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec',''), ba.b2a_hex(txt[nr]))
+                else:
+                    txt[nr] = ba.b2a_hex(txt[nr])
+            elif post == 'Quopri Codec':
+                if tags:
+                    txt[nr] = '<#>%s:%s:%s<#>%s' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec',''), ba.b2a_qp(txt[nr], quotetabs=True, header=True))
+                else:
+                    txt[nr] = ba.b2a_qp(txt[nr], quotetabs=True, header=True)
+            elif post == 'String Escape':
+                if tags:
+                    txt[nr] = '<#>%s:%s:%s<#>%s' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post], txt[nr].encode('string_escape'))
+                else:
+                    txt[nr] = txt[nr].encode('string_escape')
+            elif post == 'UU Codec':
+                if tags:
+                    txt[nr] = '<#>%s:%s:%s<#>%s' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec',''), \
+                        txt[nr].encode('uu'))
+                else:
+                    txt[nr] = txt[nr].encode('uu')
+            elif post == 'Json':
+                if tags:
+                    # Format : {"pre": "AAA", "enc": "BBB", "post": "CCC", "data": "Blah blah blah"}
+                    txt[nr] = '{"pre": "%s", "enc": "%s", "post": "%s", "data": "%s"}' % \
+                        (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post], ba.b2a_base64(txt[nr]).rstrip())
+                else:
+                    txt[nr] = json.dumps({'data':ba.b2a_base64(txt[nr]).rstrip()})
+            elif post == 'XML':
+                if tags:
+                    # Format : <root><pre>AAA</pre> <enc>BBB</enc> <post>CCC</post> <data>Blah blah blah</data></root>
+                    txt[nr] = '<root>\n<pre>%s</pre><enc>%s</enc><post>%s</post>\n<data>%s</data>\n</root>' % \
+                        (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post], ba.b2a_base64(txt[nr]).rstrip())
+                else:
+                    txt[nr] = '<root>\n<data>%s</data>\n</root>' % ba.b2a_base64(txt[nr]).rstrip()
             else:
-                final = ba.b2a_base64(encrypted)
-        elif post == 'Base32 Codec':
-            if tags:
-                final = '<#>%s:%s:%s<#>%s' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec',''), base64.b32encode(encrypted))
-            else:
-                final = base64.b32encode(encrypted)
-        elif post == 'HEX Codec':
-            if tags:
-                final = '<#>%s:%s:%s<#>%s' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec',''), ba.b2a_hex(encrypted))
-            else:
-                final = ba.b2a_hex(encrypted)
-        elif post == 'Quopri Codec':
-            if tags:
-                final = '<#>%s:%s:%s<#>%s' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec',''), ba.b2a_qp(encrypted, quotetabs=True, header=True))
-            else:
-                final = ba.b2a_qp(encrypted, quotetabs=True, header=True)
-        elif post == 'String Escape':
-            if tags:
-                final = '<#>%s:%s:%s<#>%s' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post], encrypted.encode('string_escape'))
-            else:
-                final = encrypted.encode('string_escape')
-        elif post == 'UU Codec':
-            if tags:
-                final = '<#>%s:%s:%s<#>%s' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec',''), encrypted.encode('uu'))
-            else:
-                final = encrypted.encode('uu')
-        elif post == 'Json':
-            if tags:
-                # Format : {"pre": "AAA", "enc": "BBB", "post": "CCC", "data": "Blah blah blah"}
-                final = '{"pre": "%s", "enc": "%s", "post": "%s", "data": "%s"}' % \
-                    (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post], ba.b2a_base64(encrypted).strip())
-            else:
-                final = json.dumps({'data':ba.b2a_base64(encrypted).strip()})
-        elif post == 'XML':
-            if tags:
-                # Format : <root><pre>AAA</pre> <enc>BBB</enc> <post>CCC</post> <data>Blah blah blah</data></root>
-                final = '<root>\n<pre>%s</pre><enc>%s</enc><post>%s</post>\n<data>%s</data>\n</root>' % \
-                    (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post], ba.b2a_base64(encrypted).strip())
-            else:
-                final = '<root>\n<data>%s</data>\n</root>' % ba.b2a_base64(encrypted).strip()
-        else:
-            raise Exception('Invalid codec "%s" !' % post)
+                raise Exception('Invalid codec "%s" !' % post)
         #
-        return final
+        return txt
         #
 
-    def decrypt(self, txt, pre, enc, post, pwd):
+    def decrypt(self, data, pre, enc, post, pwd):
         #
-        if not (pre and enc and post):
-            # Trying to identify and/or delete pre/enc/post tags.
-            try:
-                re_groups = re.search(NO_TAGS, txt).groups()
-                tags = findg(re_groups)
+        txt = data
+        #
+        if type(txt) != type([0,0]) and type(txt) != type((0,0)):
+            raise TypeError('Invalid data type for decryption: "%s" !' % str(type(txt)))
+        #
+        for nr in range(len(txt)):
+            if not (pre and enc and post):
+                # Trying to identify and/or delete pre/enc/post tags.
+                try:
+                    re_groups = re.search(NO_TAGS, txt[nr]).groups()
+                    tags = findg(re_groups)
 
+                    # If Json.
+                    if '{' in txt[nr] and '}' in txt[nr] and '"data":' in txt[nr]:
+                        pre = 'Json'
+                        temp = json.loads(txt[nr])
+                        enc = temp.get('enc')
+                        post = temp.get('pre')
+                        txt[nr] = temp['data']
+
+                    # If XML.
+                    elif '<data>' in txt[nr] and '</data>' in txt[nr]:
+                        pre = 'XML'
+                        enc = re.search('<enc>([0-9a-zA-Z ]{1,3})</enc>', tags).group(1)
+                        post = re.search('<pre>([0-9a-zA-Z ]{1,3})</pre>', tags).group(1)
+                        txt[nr] = re.search('<data>(.+)</data>', txt[nr], re.S).group(1)
+
+                    else:
+                        pre = tags.split(':')[2]
+                        enc = tags.split(':')[1]
+                        post = tags.split(':')[0]
+                        txt[nr] = re.sub(NO_TAGS, '', txt[nr])
+
+                    self.pre = pre
+                    self.enc = enc
+                    self.post = post
+                except:
+                    print 'Cannot decrypt, caught error with', pre, enc, post, '!'
+
+            else:
                 # If Json.
-                if tags.startswith('"pre"'):
+                if '{' in txt[nr] and '}' in txt[nr] and '"data":' in txt[nr]:
                     pre = 'Json'
-                    enc = re.search('"enc":"([0-9a-zA-Z ]{1,3})"', tags).group(1)
-                    post = re.search('"pre":"([0-9a-zA-Z ]{1,3})"', tags).group(1)
-                    txt = re.search('"data":\s*"(.+?)"', txt, re.S).group(1)
+                    temp = json.loads(txt[nr])
+                    txt[nr] = temp['data']
 
                 # If XML.
-                elif tags.startswith('<pre>'):
+                elif '<data>' in txt[nr] and '</data>' in txt[nr]:
                     pre = 'XML'
-                    enc = re.search('<enc>([0-9a-zA-Z ]{1,3})</enc>', tags).group(1)
-                    post = re.search('<pre>([0-9a-zA-Z ]{1,3})</pre>', tags).group(1)
-                    txt = re.search('<data>(.+)</data>', txt, re.S).group(1)
+                    txt[nr] = re.search('<data>(.+)</data>', txt[nr], re.S).group(1)
 
                 else:
-                    pre = tags.split(':')[2]
-                    enc = tags.split(':')[1]
-                    post = tags.split(':')[0]
-                    txt = re.sub(NO_TAGS, '', txt)
-
-                self.pre = pre
-                self.enc = enc
-                self.post = post
-            except:
-                pass
-        else:
-            txt = re.sub(NO_TAGS, '', txt)
+                    txt[nr] = re.sub(NO_TAGS, '', txt[nr])
         #
         # Check RSA key path.
         if enc == 'RSA' and not os.path.exists(self.rsa_path):
@@ -359,36 +385,36 @@ class ScrambledEgg():
         pwd = self._fix_password(pwd, enc)
         #
         # Codec operation.
-        if not pre:
-            self.__error(1, 'None', enc, post) ; return
-        elif pre == 'Base64 Codec' or pre == ENCODE_D['Base64 Codec']:
-            try: txt = ba.a2b_base64(txt)
-            except: self.__error(1, pre, enc, post) ; return
-        elif pre == 'Base32 Codec' or pre == ENCODE_D['Base32 Codec']:
-            try: txt = base64.b32decode(txt)
-            except: self.__error(1, pre, enc, post) ; return
-        elif pre == 'HEX Codec' or pre == ENCODE_D['HEX Codec']:
-            try: txt = ba.a2b_hex(txt)
-            except: self.__error(1, pre, enc, post) ; return
-        elif pre == 'Quopri Codec' or pre == ENCODE_D['Quopri Codec']:
-            try: txt = ba.a2b_qp(txt, header=True)
-            except: self.__error(1, pre, enc, post) ; return
-        elif pre == 'String Escape' or pre == ENCODE_D['String Escape']:
-            try: txt = txt.decode('string_escape')
-            except: self.__error(1, pre, enc, post) ; return
-        elif pre == 'UU Codec' or pre == ENCODE_D['UU Codec']:
-            try: txt = txt.decode('uu')
-            except: self.__error(1, pre, enc, post) ; return
-        elif pre == 'Json' or pre == ENCODE_D['Json']:
-            try: txt = ba.a2b_base64(txt)
-            except: self.__error(1, pre, enc, post) ; return
-        elif pre == 'XML':
-            try: txt = ba.a2b_base64(txt)
-            except: self.__error(1, pre, enc, post) ; return
-        else:
-            raise Exception('Invalid codec "%s" !' % pre)
+        for nr in range(len(txt)):
+            if not pre:
+                self.__error(1, 'None', enc, post) ; return
+            elif pre == 'Base64 Codec' or pre == ENCODE_D['Base64 Codec']:
+                try: txt[nr] = ba.a2b_base64(txt[nr])
+                except: self.__error(1, pre, enc, post) ; return
+            elif pre == 'Base32 Codec' or pre == ENCODE_D['Base32 Codec']:
+                try: txt[nr] = base64.b32decode(txt[nr])
+                except: self.__error(1, pre, enc, post) ; return
+            elif pre == 'HEX Codec' or pre == ENCODE_D['HEX Codec']:
+                try: txt[nr] = ba.a2b_hex(txt[nr])
+                except: self.__error(1, pre, enc, post) ; return
+            elif pre == 'Quopri Codec' or pre == ENCODE_D['Quopri Codec']:
+                try: txt[nr] = ba.a2b_qp(txt[nr], header=True)
+                except: self.__error(1, pre, enc, post) ; return
+            elif pre == 'String Escape' or pre == ENCODE_D['String Escape']:
+                try: txt[nr] = txt[nr].decode('string_escape')
+                except: self.__error(1, pre, enc, post) ; return
+            elif pre == 'UU Codec' or pre == ENCODE_D['UU Codec']:
+                try: txt[nr] = txt[nr].decode('uu')
+                except: self.__error(1, pre, enc, post) ; return
+            elif pre == 'Json' or pre == ENCODE_D['Json']:
+                try: txt[nr] = ba.a2b_base64(txt[nr])
+                except: self.__error(1, pre, enc, post) ; return
+            elif pre == 'XML':
+                try: txt[nr] = ba.a2b_base64(txt[nr])
+                except: self.__error(1, pre, enc, post) ; return
+            else:
+                raise Exception('Invalid codec "%s" !' % pre)
         #
-        # Decryption operation.
         if enc == 'AES' or enc == ENC['AES']:
             o = AES.new(pwd, mode=2)
         elif enc == 'ARC2' or enc == ENC['ARC2']:
@@ -403,29 +429,36 @@ class ScrambledEgg():
             # Using Blowfish decryption for RSA.
             o = Blowfish.new(pwd, mode=3)
         elif not enc or enc == 'None':
-            txt = removePadding(txt, 16)
+            o = None
         else:
             raise Exception('Invalid decrypt "%s" !' % enc)
         #
-        if enc != 'None':
-            try: txt = removePadding(o.decrypt(txt), 16)
-            except: self.__error(2, pre, enc, post) ; return
+        # Decryption operation.
+        if o:
+            for nr in range(len(txt)):
+                try:
+                    temp = o.decrypt(txt[nr])
+                    txt[nr] = removePadding(temp, 16)
+                except: self.__error(2, pre, enc, post) ; return
         #
         # Un-scramble operation.
-        if not post or post == 'N' or post == 'None':
-            final = txt
-        elif post == 'ZLIB' or post == SCRAMBLE_D['ZLIB']:
-            try: final = zlib.decompress(txt)
-            except: self.__error(3, pre, enc, post) ; return
-        elif post == 'BZ2' or post == SCRAMBLE_D['BZ2']:
-            try: final = bz2.decompress(txt)
-            except: self.__error(3, pre, enc, post) ; return
-        elif post == 'ROT13' or post == SCRAMBLE_D['ROT13']:
-            final = string.translate(txt, ROT)
-        else:
-            raise Exception('Invalid scramble "%s" !' % post)
+        for nr in range(len(txt)):
+            if not post or post == 'N' or post == 'None':
+                pass
+            elif post == 'ZLIB' or post == SCRAMBLE_D['ZLIB']:
+                #try:
+                txt[nr] = zlib.decompress(txt[nr])
+                #except: self.__error(3, pre, enc, post) ; return
+            elif post == 'BZ2' or post == SCRAMBLE_D['BZ2']:
+                #try:
+                txt[nr] = bz2.decompress(txt[nr])
+                #except: self.__error(3, pre, enc, post) ; return
+            elif post == 'ROT13' or post == SCRAMBLE_D['ROT13']:
+                txt[nr] = string.translate(txt[nr], ROT)
+            else:
+                raise Exception('Invalid scramble "%s" !' % post)
         #
-        return final
+        return txt
         #
 
     def toImage(self, txt, pre, enc, post, pwd, path, encrypt=True):

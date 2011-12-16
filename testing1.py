@@ -15,19 +15,25 @@ del _ENC['None']
 _ENCODE_D = scrambled_egg.ENCODE_D
 
 PASSED = True
-TESTS = 10
+TESTS = 3
 
 s = scrambled_egg.ScrambledEgg()
 s.rsa_path = 'k1.txt' # The path to the test RSA Key.
 
 def RandText():
     # Returns a random piece of text.
-    words = random.randrange(1, 99)
+    words = random.randrange(1, 19)
     txt = []
     for i in range(words):
         # Word length.
         L = random.randrange(1, 99)
-        txt.append(Random.new().read(L))
+        if 1: # Completely random
+            txt.append(Random.new().read(L))
+        else: # ASCII letters
+            text = []
+            for i in range(L):
+                text.append( chr(random.randrange(32, 126)) )
+            txt.append(''.join(text))
     return ' '.join(txt)
 
 def RandPassword():
@@ -57,9 +63,10 @@ for f in range(1, TESTS+1):
     SIZEs = {}
     log.info('Test number [%i] ...' % f)
     #
-    txt = RandText()
-    L = len(txt)
-    H = MD5.new(txt).digest()
+    nr_att = random.randrange(1, 5)
+    data = [RandText() for i in range(nr_att)]
+    L = [len(x) for x in data]
+    H = [MD5.new(x).hexdigest() for x in data]
     #
     for pre in _SCRAMBLE_D:
         for enc in _ENC:
@@ -67,58 +74,49 @@ for f in range(1, TESTS+1):
                 #
                 # IGNORE Quopri, it's still UNSTABLE.
                 if post == 'Quopri Codec': continue
+                if enc == 'RSA': continue
                 #
                 ti = clock()
+                #
                 # Generate random password.
                 pwd = RandPassword()
                 #
                 # Encrypting without adding tags.
-                _enc = s.encrypt(txt, pre, enc, post, pwd, False)
-                # Inserting random tag.
-                if post=='XML':
-                    tag = '<pre>%s</pre><enc>%s</enc><post>%s</post>' % (_SCRAMBLE_D[pre], _ENC[enc], _ENCODE_D[post])
-                elif post=='Json':
-                    tag = '"pre": "%s", "enc": "%s", "post": "%s"' % (_SCRAMBLE_D[pre], _ENC[enc], _ENCODE_D[post])
+                if len(pwd) % 2:
+                   _enc = s.encrypt(data, pre, enc, post, pwd, False)
+                   _dec = s.decrypt(_enc, post, enc, pre, pwd)
                 else:
-                    tag = ['<#>%s:%s:%s<#>','[#]%s:%s:%s[#]','{#}%s:%s:%s{#}','(#)%s:%s:%s(#)'][random.randrange(0, 4)]
-                    tag = tag % (_SCRAMBLE_D[pre], _ENC[enc], _ENCODE_D[post].replace(' Codec',''))
-                #
-                # Put tag randomly at the beggining, or at the end, and
-                # call decrypt without telling Scrambled-Egg HOW to decrypt,
-                # the methods will be extracted from tags.
-                if post=='XML':
-                    _enc = _enc.replace('</root>', tag+'</root>')
+                    _enc = s.encrypt(data, pre, enc, post, pwd)
                     _dec = s.decrypt(_enc, None, None, None, pwd)
-                elif post=='Json':
-                    #_enc = _enc.replace('{', '{'+tag+', ')
-                    _enc = _enc.replace('"}', '", '+tag+'}')
-                    _dec = s.decrypt(_enc, None, None, None, pwd)
-                elif len(pwd) % 2:
-                    _dec = s.decrypt(tag+_enc, None, None, None, pwd)
-                else:
-                    _dec = s.decrypt(_enc+tag, None, None, None, pwd)
                 #
-                if not _dec:
+                try:
+                    L_check = [len(x) for x in _dec]
+                    H_check = [MD5.new(x).hexdigest() for x in _dec]
+                except:
+                    L_check = None ; H_check = None
                     log.error('Error on test `%s %s %s`!' % (pre, enc, post))
-                    log.debug('Pwd: %s ; Tag: %s' % (pwd, tag))
+                    log.debug('Pwd: %s' % pwd)
                     log.debug(s.error.strip())
-                    # An error will be raised on next line.
+                    exit(1)
                 #
                 # Checking.
-                if len(_dec) != L or MD5.new(_dec).digest() != H:
-                    log.warning('Error! The result is not the same after encryption/ decryption with `%s %s %s`!' % (pre, enc, post))
+                if L_check != L or H_check != H:
+                    log.error('Error! The result is not the same after encryption/ decryption with `%s %s %s`!\n' % (pre, enc, post))
+                    log.debug('Original len: %s ; Decrypt len: %s' % (L, L_check))
+                    log.debug('Original hash: %s ; Decrypt hash: %s' % (H, H_check))
                     PASSED = False
+                    exit(1)
                 else:
                     log.info('Passed test `%s %s %s`.' % (pre, enc, post))
                 #
                 # Count the time.
                 tf = clock()-ti
                 SPEEDs[pre+' '+enc+' '+post] = tf
-                SIZEs[pre+' '+enc+' '+post] = len(_enc)
+                SIZEs[pre+' '+enc+' '+post] = sum([len(e) for e in _enc])
                 del _enc, _dec
                 #
     #
-    del txt
+    del data
     inv_SPEEDs = dict([[v,k] for k,v in SPEEDs.items()])
     inv_SIZEs = dict([[v,k] for k,v in SIZEs.items()])
     #
