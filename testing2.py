@@ -28,7 +28,7 @@ def RandText():
         # Word length.
         L = random.randrange(1, 99)
         txt.append(Random.new().read(L))
-    return ' '.join(txt)
+    return b' '.join(txt)
 
 def RandPassword():
     # Returns a random password between 1 and 128.
@@ -36,8 +36,8 @@ def RandPassword():
     pwd = []
     for i in range(L):
         # From 'space' to '~'.
-        pwd.append( chr(random.randrange(32, 126)) )
-    pwd = ''.join(pwd)
+        pwd.append( chr(random.randrange(32, 126)).encode() )
+    pwd = b''.join(pwd)
     L = len(pwd)
     return pwd
 
@@ -68,6 +68,8 @@ for f in range(1, TESTS+1):
     for pre in _SCRAMBLE_D:
         for enc in _ENC:
             for post in _ENCODE_D:
+                #
+                if enc=='RSA': continue
                 #
                 ti = clock()
                 img_path = os.getcwd()+'/temp_test/img_%s_%s_%s.png' % (pre, enc, post)

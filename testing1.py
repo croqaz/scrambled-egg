@@ -22,19 +22,13 @@ s.rsa_path = 'k1.txt' # The path to the test RSA Key.
 
 def RandText():
     # Returns a random piece of text.
-    words = random.randrange(1, 19)
+    words = random.randrange(1, 99)
     txt = []
     for i in range(words):
         # Word length.
         L = random.randrange(1, 99)
-        if 1: # Completely random
-            txt.append(Random.new().read(L))
-        else: # ASCII letters
-            text = []
-            for i in range(L):
-                text.append( chr(random.randrange(32, 126)) )
-            txt.append(''.join(text))
-    return ' '.join(txt)
+        txt.append(Random.new().read(L))
+    return b' '.join(txt)
 
 def RandPassword():
     # Returns a random password between 1 and 196.
@@ -42,8 +36,8 @@ def RandPassword():
     pwd = []
     for i in range(L):
         # From 'space' to '~'.
-        pwd.append( chr(random.randrange(32, 126)) )
-    pwd = ''.join(pwd)
+        pwd.append( chr(random.randrange(32, 126)).encode() )
+    pwd = b''.join(pwd)
     L = len(pwd)
     return pwd
 
@@ -63,10 +57,9 @@ for f in range(1, TESTS+1):
     SIZEs = {}
     log.info('Test number [%i] ...' % f)
     #
-    nr_att = random.randrange(1, 5)
-    data = [RandText() for i in range(nr_att)]
-    L = [len(x) for x in data]
-    H = [MD5.new(x).hexdigest() for x in data]
+    data = RandText()
+    L = len(data)
+    H = MD5.new(data).hexdigest()
     #
     for pre in _SCRAMBLE_D:
         for enc in _ENC:
@@ -83,20 +76,21 @@ for f in range(1, TESTS+1):
                 #
                 # Encrypting without adding tags.
                 if len(pwd) % 2:
-                   _enc = s.encrypt(data, pre, enc, post, pwd, False)
-                   _dec = s.decrypt(_enc, post, enc, pre, pwd)
+                    _enc = s.encrypt(data, pre, enc, post, pwd, False)
+                    _dec = s.decrypt(_enc.encode(), post, enc, pre, pwd)
                 else:
                     _enc = s.encrypt(data, pre, enc, post, pwd)
-                    _dec = s.decrypt(_enc, None, None, None, pwd)
+                    _dec = s.decrypt(_enc.encode(), None, None, None, pwd)
                 #
                 try:
-                    L_check = [len(x) for x in _dec]
-                    H_check = [MD5.new(x).hexdigest() for x in _dec]
+                    L_check = len(_dec)
+                    H_check = MD5.new(_dec).hexdigest()
                 except:
                     L_check = None ; H_check = None
                     log.error('Error on test `%s %s %s`!' % (pre, enc, post))
+                    log.debug('Txt len: %i' % L)
                     log.debug('Pwd: %s' % pwd)
-                    log.debug(s.error.strip())
+                    log.debug(' '.join(s.error.split()))
                     exit(1)
                 #
                 # Checking.
@@ -112,7 +106,7 @@ for f in range(1, TESTS+1):
                 # Count the time.
                 tf = clock()-ti
                 SPEEDs[pre+' '+enc+' '+post] = tf
-                SIZEs[pre+' '+enc+' '+post] = sum([len(e) for e in _enc])
+                SIZEs[pre+' '+enc+' '+post] = len(_enc)
                 del _enc, _dec
                 #
     #
