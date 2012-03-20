@@ -95,12 +95,12 @@ def appendCMSPadding(str, blocksize=AES_blocksize):
                 RFC 1423 (PEM) section 1.1
   Each padding byte contains the number of padding bytes.'''
   pad_len = paddingLength(len(str), blocksize)
-  padding = (chr(pad_len) * pad_len).encode('utf-8')
+  padding = (chr(pad_len) * pad_len)
   return str + padding
 
 def removeCMSPadding(str, blocksize=AES_blocksize):
   '''CMS padding: Remove padding with bytes containing the number of padding bytes.'''
-  pad_len = str[-1] #ord(str[-1]) # last byte contains number of padding bytes
+  pad_len = ord(str[-1]) # last byte contains number of padding bytes
   assert pad_len <= blocksize, 'padding error'
   assert pad_len <= len(str), 'padding error'
   return str[:-pad_len]

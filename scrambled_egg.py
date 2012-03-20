@@ -9,6 +9,7 @@
 import os, sys
 import subprocess
 import re, math
+import string
 import struct
 import urllib
 import base64
@@ -18,7 +19,7 @@ import tarfile
 
 import binascii as ba
 from collections import OrderedDict
-from io import StringIO
+from cStringIO import StringIO
 from Padding import appendPadding, removePadding
 from pbkdf2 import PBKDF2
 
@@ -40,12 +41,11 @@ try: import Image
 except: Image = None
 
 # TODO for next versions:
-# File attachments in encryption, like attachments in an email.
 # Command line to encrypt/ decrypt.
 # Daemon to watch for files in folders and encrypt them, maybe?
 
 #
-ROT = bytes.maketrans(b'nopqrstuvwxyzabcdefghijklmNOPQRSTUVWXYZABCDEFGHIJKLM', b'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
+ROT = string.maketrans('nopqrstuvwxyzabcdefghijklmNOPQRSTUVWXYZABCDEFGHIJKLM', 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
 #
 SCRAMBLE = ['None', 'ROT13', 'ZLIB', 'BZ2']
 SCRAMBLE_D = {'None':'N', 'ROT13':'R', 'ZLIB':'ZL', 'BZ2':'BZ'}
@@ -54,12 +54,12 @@ ENCODE = ['Base64 Codec', 'Base32 Codec', 'HEX Codec', 'Quopri Codec', 'Json', '
 ENCODE_D = {'Base64 Codec':'64', 'Base32 Codec':'32', 'HEX Codec':'H', 'Quopri Codec':'Q', 'Json':'JS', 'XML':'XML'}
 #
 NO_TAGS = re.compile(
-    b'<#>(?P<ts>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})</?#>|' \
-    b'\[#\](?P<tq>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})\[#\]|' \
-    b'\{#\}(?P<ta>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})\{#\}|' \
-    b'\(#\)(?P<tp>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})\(#\)|' \
-    b'(?P<tx><pre>[0-9a-zA-Z ]{1,3}</pre>\s*?<enc>[0-9a-zA-Z ]{1,3}</enc>\s*?<post>[0-9a-zA-Z ]{1,3}</post>)|' \
-    b'(?P<tj>"pre": "[0-9a-zA-Z ]{1,3}",\s*?"enc": "[0-9a-zA-Z ]{1,3}",\s*?"post": "[0-9a-zA-Z ]{1,3}")')
+    '<#>(?P<ts>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})</?#>|' \
+    '\[#\](?P<tq>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})\[#\]|' \
+    '\{#\}(?P<ta>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})\{#\}|' \
+    '\(#\)(?P<tp>[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3}:[0-9a-zA-Z ]{1,3})\(#\)|' \
+    '(?P<tx><pre>[0-9a-zA-Z ]{1,3}</pre>\s*?<enc>[0-9a-zA-Z ]{1,3}</enc>\s*?<post>[0-9a-zA-Z ]{1,3}</post>)|' \
+    '(?P<tj>"pre": "[0-9a-zA-Z ]{1,3}",\s*?"enc": "[0-9a-zA-Z ]{1,3}",\s*?"post": "[0-9a-zA-Z ]{1,3}")')
 #
 # These numbers are used when (re)creating PNG images.
 SCRAMBLE_NR = {'None':'1', 'ROT13':'2', 'ZLIB':'3', 'BZ2':'4'}
@@ -74,55 +74,7 @@ __version__ = 'ver 0.5'
 
 def findg(g):
     for i in g:
-        if i: return b''.join(i.split())
-
-# ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
-#       Tar  File  Attachments
-# ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
-
-class Attachments():
-
-    def __init__(self):
-
-        self.io = StringIO()
-        self.tar = tarfile.open('/attachment', mode='w', format=tarfile.PAX_FORMAT, fileobj=self.io)
-
-    def removeFile(self, nameToDelete):
-        '''
-        Remove file from archive. This is not implemented in python TAR lib.
-        '''
-        io_new = StringIO()
-        original = tarfile.open('/attachment', mode='r', format=tarfile.PAX_FORMAT, fileobj=self.io)
-        modified = tarfile.open('/attachment', mode='w', format=tarfile.PAX_FORMAT, fileobj=io_new)
-
-        for info in self.tar.getmembers():
-            if info.name.lower() == nameToDelete.lower():
-                continue
-            extracted = original.extractfile(info)
-            if not extracted:
-                continue
-            modified.addfile(info, extracted)
-
-        original.close()
-        del original
-        # The new IO and TAR.
-        self.io = io_new
-        self.tar = modified
-
-    def addFile(self, tarInfo, fileObj):
-        '''
-        Adds file inside archive, using the info.
-        '''
-        if not tarInfo.name in self.tar.getnames():
-            self.tar.addfile(tarInfo, fileObj)
-
-        print('Length of attach:', len(self.io.getvalue()))
-
-    def list(self):
-        '''
-        Lists included file.
-        '''
-        return self.tar.getnames()
+        if i: return ''.join(i.split())
 
 # ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
 #       Scrambled-Egg  Encryption  Engine
@@ -141,18 +93,18 @@ class ScrambledEgg():
         #
         if step==1:
             if field=='R':
-                pre += b' (ERROR!)'
+                pre += ' (ERROR!)'
             else:
-                pre += b' (IGNORED!)'
+                pre += ' (IGNORED!)'
         elif step==2:
-            enc += b' (ERROR!)'
+            enc += ' (ERROR!)'
         elif step==3:
-            post += b' (ERROR!)'
+            post += ' (ERROR!)'
 
         if field=='R':
-            self.error = b'  Decryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post)
+            self.error = '  Decryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post)
         else:
-            self.error = b'  Encryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post)
+            self.error = '  Encryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post)
         #
 
     def _fix_password(self, pwd, enc):
@@ -168,7 +120,7 @@ class ScrambledEgg():
         # Accepting ANY type of password.
         pwd = ba.b2a_base64(pwd)
 
-        if type(enc) == type(b''):
+        if type(enc) == type(''):
             enc = enc.decode()
 
         if enc == 'AES' or enc == ENC['AES']:
@@ -204,7 +156,7 @@ class ScrambledEgg():
 
         if not pwd:
             # Only for NULL passwords.
-            return key_size * b'X'
+            return key_size * 'X'
 
         # Scramble the password many times.
         # Can't use random salt, 'cose the same pass must be recreated for decryption.
@@ -217,43 +169,43 @@ class ScrambledEgg():
 
     def encrypt(self, txt, pre, enc, post, pwd, tags=True):
         #
-        if type(txt) != type(b''):
+        if type(txt) != type('') and type(txt) != type(u''):
             raise TypeError('Invalid data type for encryption: "%s" !' % str(type(txt)))
         #
         # Scramble operation.
-        if pre in ['None', b'None']:
+        if pre in ['None', 'None']:
             pass
-        elif pre in ['ZLIB', b'ZLIB']:
+        elif pre in ['ZLIB', 'ZLIB']:
             txt = zlib.compress(txt)
-        elif pre in ['BZ2', b'BZ2']:
+        elif pre in ['BZ2', 'BZ2']:
             txt = bz2.compress(txt)
-        elif pre in ['ROT13', b'ROT13']:
-            txt = bytes.translate(txt, ROT)
+        elif pre in ['ROT13', 'ROT13']:
+            txt = string.translate(txt, ROT)
         else:
             raise Exception('Invalid scramble "%s" !' % pre)
         #
         # Check RSA key path.
-        if enc in ['RSA', b'RSA'] and not os.path.exists(self.rsa_path):
+        if enc in ['RSA', 'RSA'] and not os.path.exists(self.rsa_path):
             print('RSA encryption must specify a valid path !')
             self.__error(2, pre, enc, post, field='L')
             return
         #
         pwd = self._fix_password(pwd, enc)
         #
-        if enc in ['AES', b'AES']:
+        if enc in ['AES', 'AES']:
             o = AES.new(pwd, mode=2)
-        elif enc in ['ARC2', b'ARC2']:
+        elif enc in ['ARC2', 'ARC2']:
             o = ARC2.new(pwd, mode=2)
-        elif enc in ['CAST', b'CAST']:
+        elif enc in ['CAST', 'CAST']:
             o = CAST.new(pwd, mode=2)
-        elif enc in ['Blowfish', b'Blowfish']:
+        elif enc in ['Blowfish', 'Blowfish']:
             o = Blowfish.new(pwd, mode=2)
-        elif enc in ['DES3', b'DES3']:
+        elif enc in ['DES3', 'DES3']:
             o = DES3.new(pwd, mode=2)
-        elif enc in ['RSA', b'RSA']:
+        elif enc in ['RSA', 'RSA']:
             # Using Blowfish encryption for RSA.
             o = Blowfish.new(pwd, mode=3)
-        elif not enc or enc in ['None', b'None']:
+        elif not enc or enc in ['None', 'None']:
             o = None
         else:
             raise Exception('Invalid encryption mode "%s" !' % enc)
@@ -265,38 +217,38 @@ class ScrambledEgg():
             del temp
         #
         # Codec operation.
-        if post in ['Base64 Codec', b'Base64 Codec']:
+        if post in ['Base64 Codec', 'Base64 Codec']:
             if tags:
                 txt = '<#>%s:%s:%s<#>%s' % \
                     (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec',''), ba.b2a_base64(txt).decode())
             else:
                 txt = ba.b2a_base64(txt).decode()
-        elif post in ['Base32 Codec', b'Base32 Codec']:
+        elif post in ['Base32 Codec', 'Base32 Codec']:
             if tags:
                 txt = '<#>%s:%s:%s<#>%s' % \
                     (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec',''), base64.b32encode(txt).decode())
             else:
                 txt = base64.b32encode(txt).decode()
-        elif post in ['HEX Codec', b'HEX Codec']:
+        elif post in ['HEX Codec', 'HEX Codec']:
             if tags:
                 txt = '<#>%s:%s:%s<#>%s' % \
                     (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec',''), ba.b2a_hex(txt).decode())
             else:
                 txt = ba.b2a_hex(txt).decode()
-        elif post in ['Quopri Codec', b'Quopri Codec']:
+        elif post in ['Quopri Codec', 'Quopri Codec']:
             if tags:
                 txt = '<#>%s:%s:%s<#>%s' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec',''), \
                     ba.b2a_qp(txt, quotetabs=True, header=True).decode())
             else:
                 txt = ba.b2a_qp(txt, quotetabs=True, header=True).decode()
-        elif post in ['Json', b'Json']:
+        elif post in ['Json', 'Json']:
             if tags:
                 # Format : {"pre": "AAA", "enc": "BBB", "post": "CCC", "data": "Blah blah blah"}
                 txt = '{"pre": "%s", "enc": "%s", "post": "%s", "data": "%s"}' % \
                     (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post], ba.b2a_base64(txt).rstrip().decode())
             else:
                 txt = json.dumps({'data':ba.b2a_base64(txt).rstrip().decode()})
-        elif post in ['XML', b'XML']:
+        elif post in ['XML', 'XML']:
             if tags:
                 # Format : <root><pre>AAA</pre> <enc>BBB</enc> <post>CCC</post> <data>Blah blah blah</data></root>
                 txt = '<root>\n<pre>%s</pre><enc>%s</enc><post>%s</post>\n<data>%s</data>\n</root>' % \
@@ -312,7 +264,7 @@ class ScrambledEgg():
 
     def decrypt(self, txt, pre, enc, post, pwd):
         #
-        if type(txt) != type(b''):
+        if type(txt) != type('') and type(txt) != type(u''):
             raise TypeError('Invalid data type for decryption: "%s" !' % str(type(txt)))
         #
         if not (pre and enc and post):
@@ -322,25 +274,25 @@ class ScrambledEgg():
             tags = findg(re_groups)
 
             # If Json.
-            if b'{' in txt and b'}' in txt and b'"data":' in txt:
-                pre = b'Json'
+            if '{' in txt and '}' in txt and '"data":' in txt:
+                pre = 'Json'
                 temp = json.loads(txt.decode())
                 enc = temp.get('enc').encode()
                 post = temp.get('pre').encode()
                 txt = temp['data'].encode()
 
             # If XML.
-            elif b'<data>' in txt and b'</data>' in txt:
-                pre = b'XML'
-                enc = re.search(b'<enc>([0-9a-zA-Z ]{1,3})</enc>', tags).group(1)
-                post = re.search(b'<pre>([0-9a-zA-Z ]{1,3})</pre>', tags).group(1)
-                txt = re.search(b'<data>(.+)</data>', txt, re.S).group(1)
+            elif '<data>' in txt and '</data>' in txt:
+                pre = 'XML'
+                enc = re.search('<enc>([0-9a-zA-Z ]{1,3})</enc>', tags).group(1)
+                post = re.search('<pre>([0-9a-zA-Z ]{1,3})</pre>', tags).group(1)
+                txt = re.search('<data>(.+)</data>', txt, re.S).group(1)
 
             else:
-                pre = tags.split(b':')[2]
-                enc = tags.split(b':')[1]
-                post = tags.split(b':')[0]
-                txt = re.sub(NO_TAGS, b'', txt)
+                pre = tags.split(':')[2]
+                enc = tags.split(':')[1]
+                post = tags.split(':')[0]
+                txt = re.sub(NO_TAGS, '', txt)
 
             pre = self.pre = pre.decode()
             enc = self.enc = enc.decode()
@@ -351,18 +303,18 @@ class ScrambledEgg():
 
         else:
             # If Json.
-            if b'{' in txt and b'}' in txt and b'"data":' in txt:
+            if '{' in txt and '}' in txt and '"data":' in txt:
                 pre = 'Json'
                 temp = json.loads(txt.decode())
                 txt = temp['data'].encode()
 
             # If XML.
-            elif b'<data>' in txt and b'</data>' in txt:
+            elif '<data>' in txt and '</data>' in txt:
                 pre = 'XML'
-                txt = re.search(b'<data>(.+)</data>', txt, re.S).group(1)
+                txt = re.search('<data>(.+)</data>', txt, re.S).group(1)
 
             else:
-                txt = re.sub(NO_TAGS, b'', txt)
+                txt = re.sub(NO_TAGS, '', txt)
         #
         # Check RSA key path.
         if enc == 'RSA' and not os.path.exists(self.rsa_path):
@@ -433,7 +385,7 @@ class ScrambledEgg():
             try: txt = bz2.decompress(txt)
             except: self.__error(3, pre, enc, post) ; return
         elif post == 'ROT13' or post == SCRAMBLE_D['ROT13']:
-            txt = bytes.translate(txt, ROT)
+            txt = string.translate(txt, ROT)
         else:
             raise Exception('Invalid scramble "%s" !' % post)
         #
@@ -662,7 +614,7 @@ class ScrambledEgg():
         # For Base64/ Base32, first pixel represents only the Pre/ Enc/ Post information.
         first_pixel_hex = struct.pack('BB', fp_val[0], fp_val[1]).encode('hex')
         blank = int(struct.pack('BB', fp_val[2], fp_val[3]).encode('hex'), 16)
-        first_pixel_base = [chr(fp_val[0]), chr(fp_val[1]), chr(fp_val[2]), chr(fp_val[3])]
+        first_pixel_base = [unichr(fp_val[0]), unichr(fp_val[1]), unichr(fp_val[2]), unichr(fp_val[3])]
 
         # Reverse number dictionaries.
         reverse_s = dict(zip(SCRAMBLE_NR.values(), SCRAMBLE_NR.keys()))
@@ -726,7 +678,7 @@ class ScrambledEgg():
                     # For each channel in current pixel.
                     for v in [_r(rgba), _g(rgba), _b(rgba), _a(rgba)]:
                         if v and v != 255:
-                            list_val.append(chr(v))
+                            list_val.append(unichr(v))
                         # If this color is 0 or 255, the rest of the pixel is blank.
                         else:
                             break
@@ -742,7 +694,7 @@ class ScrambledEgg():
                     # For each channel in current pixel.
                     for v in rgba:
                         if v and v != 255:
-                            list_val.append(chr(v))
+                            list_val.append(unichr(v))
                         # If this color is 0 or 255, the rest of the pixel is blank.
                         else:
                             break
@@ -812,6 +764,7 @@ class ScrambledEgg():
             return val
         #
 
+
 # ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
 #       GUI  Container  Widget
 # ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
@@ -821,7 +774,7 @@ class ContainerWidget(QtGui.QWidget):
     def __init__(self, parent):
         '''
         Main container. It's not transparent. \n\
-        I must use this, to accept file drops, as attachments.
+        I must use this, to accept file drops.
         '''
         super(ContainerWidget, self).__init__(parent)
         self.mMoving = False
@@ -841,60 +794,6 @@ class ContainerWidget(QtGui.QWidget):
         if(event.button() == QtCore.Qt.LeftButton):
             self.mMoving = False
 
-# ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
-#       GUI  Attachments  Window
-# ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
-
-class AttachWindow(QtGui.QDialog):
-
-    def __init__(self, parent):
-        '''
-        Attachments dialog. \n\
-        This represents the attachments, visually, as a table.
-        '''
-        super(AttachWindow, self).__init__(parent)
-        self.attach = parent.attach
-        self.setWindowTitle('Attachments')
-        self.setWhatsThis('Add or remove attachments using DRAG & DROP')
-        self.resize(340, 355)
-
-        self.table = QtGui.QTableWidget(self)
-        self.table.cellClicked.connect(self.onDelete)
-        self.table.setColumnCount(2)
-        self.setupTable()
-
-        layout = QtGui.QVBoxLayout(self)
-        self.setLayout(layout)
-        layout.addWidget(self.table)
-
-    def setupTable(self):
-        # Re-init all table data.
-        self.table.clear()
-        O = self.attach.list()
-        L = len(O)
-
-        self.table.setRowCount(L)
-        self.table.setHorizontalHeaderItem(0, QtGui.QTableWidgetItem('Attachment'))
-        self.table.setHorizontalHeaderItem(1, QtGui.QTableWidgetItem('Del'))
-        self.table.setColumnWidth(0, 255)
-        self.table.setColumnWidth(1, 30)
-
-        for i in range(L):
-            self.table.setItem(i, 0, QtGui.QTableWidgetItem(O[i]))
-            self.table.setItem(i, 1, QtGui.QTableWidgetItem('--'))
-            self.table.item(i, 1).setTextAlignment(QtCore.Qt.AlignHCenter|QtCore.Qt.AlignVCenter)
-
-    def onDelete(self, row, column):
-        # If it's the 2nd column.
-        if column != 1: return
-        # Delete file from tar archive.
-        item = self.table.item(row, 0).text()
-        msg = QtGui.QMessageBox.warning(self, 'Delete file ? ...',
-            'Are you sure you want to delete "%s" ?' % item,
-            QtGui.QMessageBox.Yes|QtGui.QMessageBox.No, QtGui.QMessageBox.No)
-        if msg == QtGui.QMessageBox.Yes:
-            self.attach.removeFile(item)
-            self.setupTable()
 
 # ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- ----- -----
 #       MAIN  Scrambled-Egg  Window
@@ -922,7 +821,6 @@ class Window(QtGui.QMainWindow):
         self.setAcceptDrops(True)
 
         self.SE = ScrambledEgg()
-        self.attach = Attachments()
 
         self.centralWidget = ContainerWidget(self) # Central Widget.
         self.setCentralWidget(self.centralWidget)
@@ -952,7 +850,6 @@ class Window(QtGui.QMainWindow):
         self.setFormatting = QtGui.QCheckBox('Formatted text', self.centralWidget) # Left side.
         self.showHTML = QtGui.QCheckBox('Show HTML', self.centralWidget) # Left side.
         self.setTags = QtGui.QCheckBox('No tags', self.centralWidget)    # Left side.
-        self.attachButton = QtGui.QPushButton('@', self.centralWidget)   # Left side.
 
         self.preDecrypt = QtGui.QComboBox(self.centralWidget)    # Right side.
         self.comboDecrypt = QtGui.QComboBox(self.centralWidget)  # Right side.
@@ -983,7 +880,6 @@ class Window(QtGui.QMainWindow):
         self.layout.addWidget(self.preProcess,          5, 2, 1, 1)
         self.layout.addWidget(self.comboCrypt,          5, 3, 1, 1)
         self.layout.addWidget(self.postProcess,         5, 4, 1, 1)
-        self.layout.addWidget(self.attachButton,        5, 6, 1, 1)
         self.layout.addWidget(self.preDecrypt,          5, 7, 1, 1)
         self.layout.addWidget(self.comboDecrypt,        5, 8, 1, 1)
         self.layout.addWidget(self.postDecrypt,         5, 9, 1, 1)
@@ -1076,11 +972,6 @@ class Window(QtGui.QMainWindow):
         self.buttonBrowseRSAR.setMaximumWidth(60)
         self.buttonBrowseRSAR.setDisabled(True)
 
-        # Attach button.
-        self.attachButton.setMaximumWidth(25)
-        self.attachButton.setToolTip('Zero attachments')
-        self.attachButton.setStyleSheet(D['STYLE_BUTTON'])
-
         # Formatted text.
         self.setFormatting.setTristate(False)
         self.setFormatting.setToolTip('Encrypt this text as HTML')
@@ -1159,7 +1050,6 @@ class Window(QtGui.QMainWindow):
         self.comboDecrypt.currentIndexChanged.connect(self.onRightTextChanged)
         self.postDecrypt.currentIndexChanged.connect(self.onRightTextChanged)
         #
-        self.attachButton.clicked.connect(self.onAttachments)
         self.saveFile.clicked.connect(self.onSave)
         self.loadFile.clicked.connect(self.onLoad)
         self.helpButton.clicked.connect(self.onHelp)
@@ -1211,24 +1101,10 @@ class Window(QtGui.QMainWindow):
                 sz = os.fstat(o.fileno())[6]
                 t = tarfile.TarInfo(os.path.split(f_name)[1])
                 t.size = sz
-                self.attach.addFile(t, o)
+                #self.attach.addFile(t, o) #?
                 #
 
-        l = self.attach.list()
-        if not l:
-            self.attachButton.setText('@')
-            self.attachButton.setToolTip('Zero attachments')
-        elif l==1:
-            self.attachButton.setText('1 @')
-            self.attachButton.setToolTip('1 attachment')
-        else:
-            self.attachButton.setText('%i @' % len(l))
-            self.attachButton.setToolTip('%i attachments' % len(l))
-        #
-
         print('I should encrypt on DROP!')
-        print('Total len:', len(self.attach.io.getvalue()))
-
         #
 
     def browseRSAkey(self):
@@ -1296,15 +1172,15 @@ class Window(QtGui.QMainWindow):
     def cleanupHtml(self, txt):
         #
         def spacerepl(matchobj):
-            return matchobj.group(0).replace(b' ', b'&nbsp;')
+            return matchobj.group(0).replace(' ', '&nbsp;')
 
-        txt = re.sub(b'>([^<>]+)<(?!/style>)', spacerepl, txt)
+        txt = re.sub('>([^<>]+)<(?!/style>)', spacerepl, txt)
         open('doc.htm', 'wb').write(txt)
 
         p = subprocess.Popen('tidy.exe ' + ' -config config.txt doc.htm', shell=False).wait()
         txt = open('doc.htm', 'rb').read()
-        txt = txt.replace(b'<title></title>\n', b'')
-        txt = txt.replace(b'<meta name="generator" content="HTML Tidy for Windows (vers 25 March 2009), see www.w3.org">\n', b'')
+        txt = txt.replace('<title></title>\n', '')
+        txt = txt.replace('<meta name="generator" content="HTML Tidy for Windows (vers 25 March 2009), see www.w3.org">\n', '')
         os.remove('doc.htm')
 
         return txt
@@ -1402,25 +1278,25 @@ class Window(QtGui.QMainWindow):
             tags = findg(re_groups)
 
             # If Json.
-            if tags.startswith(b'"pre"'):
-                pre = b'Json'
-                enc = re.search(b'"enc":"([0-9a-zA-Z ]{1,3})"', tags).group(1)
-                post = re.search(b'"pre":"([0-9a-zA-Z ]{1,3})"', tags).group(1)
+            if tags.startswith('"pre"'):
+                pre = 'Json'
+                enc = re.search('"enc":"([0-9a-zA-Z ]{1,3})"', tags).group(1)
+                post = re.search('"pre":"([0-9a-zA-Z ]{1,3})"', tags).group(1)
             # If XML.
-            elif tags.startswith(b'<pre>'):
-                pre = b'XML'
-                enc = re.search(b'<enc>([0-9a-zA-Z ]{1,3})</enc>', tags).group(1)
-                post = re.search(b'<pre>([0-9a-zA-Z ]{1,3})</pre>', tags).group(1)
+            elif tags.startswith('<pre>'):
+                pre = 'XML'
+                enc = re.search('<enc>([0-9a-zA-Z ]{1,3})</enc>', tags).group(1)
+                post = re.search('<pre>([0-9a-zA-Z ]{1,3})</pre>', tags).group(1)
             else:
                 pre=None ; enc=None ; post=None
 
             # Identify the rest.
             if not pre:
-                pre = tags.split(b':')[2]
+                pre = tags.split(':')[2]
             if not enc:
-                enc = tags.split(b':')[1]
+                enc = tags.split(':')[1]
             if not post:
-                post = tags.split(b':')[0]
+                post = tags.split(':')[0]
 
             pre = pre.decode()
             enc = enc.decode()
@@ -1476,23 +1352,6 @@ class Window(QtGui.QMainWindow):
             self.leftText.clear()
             self.textBar.setStyleSheet(D['TXT_BAR_BAD'])
             self.textBar.setText(self.SE.error)
-        #
-
-    def onAttachments(self):
-        #
-        dlg = AttachWindow(self)
-        dlg.exec_()
-
-        l = self.attach.list()
-        if not l:
-            self.attachButton.setText('@')
-            self.attachButton.setToolTip('Zero attachments')
-        elif l==1:
-            self.attachButton.setText('1 @')
-            self.attachButton.setToolTip('1 attachment')
-        else:
-            self.attachButton.setText('%i @' % len(l))
-            self.attachButton.setToolTip('%i attachments' % len(l))
         #
 
     def onSave(self):
