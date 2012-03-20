@@ -1178,11 +1178,19 @@ class Window(QtGui.QMainWindow):
         open('doc.htm', 'wb').write(txt)
 
         p = subprocess.Popen('tidy.exe ' + ' -config config.txt doc.htm', shell=False).wait()
-        txt = open('doc.htm', 'rb').read()
-        txt = txt.replace('<title></title>\n', '')
-        txt = txt.replace('<meta name="generator" content="HTML Tidy for Windows (vers 25 March 2009), see www.w3.org">\n', '')
+        txt = []
+        for line in open('doc.htm', 'rb').readlines():
+            if '<title' in line:
+                continue
+            elif '<meta' in line:
+                continue
+            print line
+            txt.append(line)
+
+        txt = ''.join(txt)
         os.remove('doc.htm')
 
+        #open('doc.htm', 'wb').write(txt)
         return txt
         #
 
