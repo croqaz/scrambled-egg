@@ -1174,23 +1174,22 @@ class Window(QtGui.QMainWindow):
         def spacerepl(matchobj):
             return matchobj.group(0).replace(' ', '&nbsp;')
 
+        # Replacing all spaces with &nbsp;
         txt = re.sub('>([^<>]+)<(?!/style>)', spacerepl, txt)
-        open('doc.htm', 'wb').write(txt)
+        # Write the new file
+        open('doc.htm', 'w').write(txt)
+        # Process the file with Tidy
+        p = subprocess.Popen('tidy.exe ' + ' -config tidy.txt doc.htm', shell=False).wait()
+        txt = open('doc.htm', 'r').read()
+        # Delete the wrong/ obsolete tags
+        txt = txt.replace(u'<meta name="generator" content="HTML Tidy for Windows (vers 25 March 2009), see www.w3.org">\n', '')
+        txt = txt.replace(u'<meta name="qrichtext" content="1">\n', '')
+        txt = txt.replace(u'<title></title>\n', '')
+        txt = txt.replace(u'</style>\n\n<style type="text/css">\n', '')
+        txt = txt.replace(u'<br>\n', '\n')
+        # The clean file, for debug...
+        #open('doc.htm', 'w').write(txt)
 
-        p = subprocess.Popen('tidy.exe ' + ' -config config.txt doc.htm', shell=False).wait()
-        txt = []
-        for line in open('doc.htm', 'rb').readlines():
-            if '<title' in line:
-                continue
-            elif '<meta' in line:
-                continue
-            print line
-            txt.append(line)
-
-        txt = ''.join(txt)
-        os.remove('doc.htm')
-
-        #open('doc.htm', 'wb').write(txt)
         return txt
         #
 

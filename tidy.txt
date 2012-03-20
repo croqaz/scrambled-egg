@@ -10,8 +10,8 @@ join-classes: yes
 join-styles: yes
 merge-divs: yes
 merge-spans: yes
-doctype: omit
-output-html: yes
 
+output-html: yes
+doctype: transitional
 write-back: yes
 quiet: yes
