@@ -7,6 +7,7 @@
 # ---
 
 import os, sys
+import platform
 import subprocess
 import re, math
 import string
@@ -1178,8 +1179,16 @@ class Window(QtGui.QMainWindow):
         txt = re.sub('>([^<>]+)<(?!/style>)', spacerepl, txt)
         # Write the new file
         open('doc.htm', 'w').write(txt)
+
         # Process the file with Tidy
-        p = subprocess.Popen('tidy.exe ' + ' -config tidy.txt doc.htm', shell=False).wait()
+        if platform.uname()[0].lower() == 'windows':
+            p = subprocess.Popen(['tidy.exe', '-config', 'tidy.txt', 'doc.htm']).wait()
+        elif platform.uname()[0].lower() == 'linux':
+            p = subprocess.Popen(['tidy', '-config', 'tidy.txt', 'doc.htm']).wait()
+        else:
+            print('Platform `%s` is not supported yet!\n' % platform.uname()[0])
+            return ''
+
         txt = open('doc.htm', 'r').read()
         # Delete the wrong/ obsolete tags
         txt = txt.replace(u'<meta name="generator" content="HTML Tidy for Windows (vers 25 March 2009), see www.w3.org">\n', '')
@@ -1506,7 +1515,10 @@ def loadThemes():
 def commandLine():
 
     import optparse
-    usage = "usage: %prog --input in_file [--output out_file] --pre PRE --enc ENC --post POST"
+    usage = """
+Encryption: %prog --input in_file [--output out_file] -p password --pre PRE --enc ENC --post POST
+or
+Decryption: %prog --input in_file [--output out_file] -p password --decrypt true"""
     version="%prog v1.0"
     description = '''Scrambled-Egg v1.0 command line.
 Compress, encrypt and encode your file in command line.
@@ -1519,22 +1531,29 @@ Compress, encrypt and encode your file in command line.
     parser.add_option("-i", "--input",  action="store", help="input file path")
     parser.add_option("-o", "--output", action="store", help="output file path")
     parser.add_option("-p", "--pwd",    action="store", help="password used for encryption")
-    parser.add_option("--pre",          action="store", help="pre operation    (compress, default=None)")
-    parser.add_option("-e", "--enc",    action="store", help="encryption operation  (default=AES)")
-    parser.add_option("--post",         action="store", help="post operation   (encode, default=Base64)")
+    parser.add_option("--decrypt",      action="store", help="decrypt operation (default=False)")
+    parser.add_option("--pre",          action="store", help="pre operation     (compress, default=None)")
+    parser.add_option("-e", "--enc",    action="store", help="encryption operation (default=AES)")
+    parser.add_option("--post",         action="store", help="post operation    (encode, default=Base64)")
     (options, args) = parser.parse_args()
 
     if not options.output:
         options.output = 'output.dat'
 
-    if not options.enc:
+    if not options.enc and not options.decrypt:
         options.enc = 'AES'
+    elif options.decrypt:
+        options.enc = 'X'
 
-    if not options.pre:
+    if not options.pre and not options.decrypt:
         options.pre = 'None'
+    elif options.decrypt:
+        options.pre = 'X'
 
-    if not options.post:
+    if not options.post and not options.decrypt:
         options.post = 'Base64'
+    elif options.decrypt:
+        options.post = 'X'
 
     if not options.input:
         print('Must specify an input file ! Exiting !')
@@ -1548,9 +1567,9 @@ Compress, encrypt and encode your file in command line.
         print('Must specify a password ! Exiting !')
         return 1
 
-    pre =  {'NONE':'None', 'ROT13':'ROT13', 'ZLIB':'ZLIB', 'BZ2':'BZ2'}
-    enc =  {'AES':'AES', 'BLOWFISH':'Blowfish', 'ARC2':'ARC2', 'CAST':'CAST', 'DES3':'DES3', 'RSA':'RSA'}
-    post = {'BASE64':'Base64 Codec', 'BASE32':'Base32 Codec', 'HEX':'HEX Codec', 'JSON':'Json', 'XML':'XML'}
+    pre =  {'NONE':'None', 'ROT13':'ROT13', 'ZLIB':'ZLIB', 'BZ2':'BZ2', 'X':None}
+    enc =  {'AES':'AES', 'BLOWFISH':'Blowfish', 'ARC2':'ARC2', 'CAST':'CAST', 'DES3':'DES3', 'RSA':'RSA', 'X':None}
+    post = {'BASE64':'Base64 Codec', 'BASE32':'Base32 Codec', 'HEX':'HEX Codec', 'JSON':'Json', 'XML':'XML', 'X':None}
 
     if options.enc.upper() not in enc:
         print('Value `%s` is an invalid encryption operation ! Exiting !' % options.enc)
@@ -1564,11 +1583,21 @@ Compress, encrypt and encode your file in command line.
         print('Value `%s` is an invalid post operation ! Exiting !' % options.post)
         return 1
 
-    SE = ScrambledEgg()
-    val = SE.encrypt(open(options.input,'rb').read(),
-        pre[options.pre.upper()], enc[options.enc.upper()], post[options.post.upper()],
-        options.pwd, tags=True)
-    open(options.output,'w').write(val)
+    if options.decrypt:
+        SE = ScrambledEgg()
+        print('Decrypting from `%s` to `%s`...' % (options.input, options.output))
+        val = SE.decrypt(open(options.input, 'rb').read(),
+            pre[options.pre.upper()], enc[options.enc.upper()], post[options.post.upper()],
+            pwd=options.pwd)
+        open(options.output, 'wb').write(val)
+
+    else:
+        SE = ScrambledEgg()
+        print('Encrypting from `%s` to `%s`...' % (options.input, options.output))
+        val = SE.encrypt(open(options.input, 'rb').read(),
+            pre[options.pre.upper()], enc[options.enc.upper()], post[options.post.upper()],
+            options.pwd, tags=True)
+        open(options.output, 'wb').write(val)
 
 #
 
