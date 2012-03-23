@@ -41,10 +41,6 @@ from PyQt4 import QtGui
 try: import Image
 except: Image = None
 
-# TODO for next versions:
-# Command line to encrypt/ decrypt.
-# Daemon to watch for files in folders and encrypt them, maybe?
-
 #
 ROT = string.maketrans('nopqrstuvwxyzabcdefghijklmNOPQRSTUVWXYZABCDEFGHIJKLM', 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
 #
@@ -818,7 +814,7 @@ class Window(QtGui.QMainWindow):
         self.setStyleSheet(D['STYLE_MAIN'])
         self.setWindowTitle('Scrambled Egg %s :: Live Crypt' % __version__)
         self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        #self.setWindowOpacity(0.9)
+        self.setWindowOpacity(0.9)
         self.setAcceptDrops(True)
 
         self.SE = ScrambledEgg()
@@ -870,7 +866,7 @@ class Window(QtGui.QMainWindow):
         self.micLayout.addWidget(self.closeButton)
 
         # Row, Col, rowSpan, colSpan
-        self.layout.addWidget(self.container,           0, 0, 12, 15)
+        self.layout.addWidget(self.container,           0, 1, 43, 12)
         self.layout.addWidget(self.textBar,             1, 1, 3, 8)
         self.layout.addLayout(self.micLayout,           1, 10+C['MIC_BTNS_POS'], 1, C['MIC_BTNS_SPAN'])
         self.layout.addItem(QtGui.QSpacerItem(1, 8),    3, 1, 1, 1)
@@ -895,18 +891,18 @@ class Window(QtGui.QMainWindow):
         self.layout.addWidget(self.buttonBrowseRSAL,    7, 6, 1, 1)
         self.layout.addWidget(self.buttonBrowseRSAR,    7, 11, 1, 1)
 
-        self.layout.addWidget(self.leftText,            8, 2, 2, 5)
-        self.layout.addWidget(self.rightText,           8, 7, 2, 5)
+        self.layout.addWidget(self.leftText,            8, 2, 32, 5)
+        self.layout.addWidget(self.rightText,           8, 7, 32, 5)
 
-        self.layout.addWidget(self.setFormatting,       10, 2, 1, 1)
-        self.layout.addWidget(self.showHTML,            10, 3, 1, 1)
-        self.layout.addWidget(self.setTags,             10, 4, 1, 1)
-        self.layout.addWidget(self.loadFile,            10, 7, 1, 1)
-        self.layout.addWidget(self.saveFile,            10, 8, 1, 1)
-        self.layout.addWidget(self.helpButton,          10, 9, 1, 1)
+        self.layout.addWidget(self.setFormatting,       40, 2, 1, 1)
+        self.layout.addWidget(self.showHTML,            40, 3, 1, 1)
+        self.layout.addWidget(self.setTags,             40, 4, 1, 1)
+        self.layout.addWidget(self.loadFile,            40, 7, 1, 1)
+        self.layout.addWidget(self.saveFile,            40, 8, 1, 1)
+        self.layout.addWidget(self.helpButton,          40, 9, 1, 1)
 
-        self.layout.addWidget(self.nrLettersL,          10, 6, 1, 1)
-        self.layout.addWidget(self.nrLettersR,          10, 11, 1, 1)
+        self.layout.addWidget(self.nrLettersL,          40, 6, 1, 1)
+        self.layout.addWidget(self.nrLettersR,          40, 11, 1, 1)
 
         self.__setup() # Prepair all components!
         self.__connect() # Connect all components!
@@ -938,8 +934,6 @@ class Window(QtGui.QMainWindow):
         self.saveFile.setStyleSheet(D['STYLE_BUTTON'])
         self.leftText.setStyleSheet(D['STYLE_L_TEXTEDIT'])
         self.rightText.setStyleSheet(D['STYLE_R_TEXTEDIT'])
-        self.leftText.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding))
-        self.rightText.setSizePolicy(QtGui.QSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding))
 
         # Password fields.
         self.linePasswordL.setEchoMode(QtGui.QLineEdit.Password)
@@ -1438,18 +1432,18 @@ class Window(QtGui.QMainWindow):
     def onHelp(self):
         #
         QtGui.QMessageBox.about(self.centralWidget, 'Scrambled Egg %s Help' % __version__,
-            '<br><b>Copyright (C) 2010-2011</b> : Cristi Constantin. All rights reserved.<br>'
+            '<br><b>Copyright (C) 2010-2012</b> : Cristi Constantin. All rights reserved.<br>'
             '<b>Website</b> : http://scrambled-egg.googlecode.com/<br><br>'
             'Scrambled-Egg is a software designed for encrypting your sensitive data.<br>'
             'This is done in <font color="blue"><b>3 steps</b></font> : <i>pre encryption</i>, <i>encryption</i>, and <i>post encryption</i>.<br>'
-            'The input data can be : plain text, formatted text, or a binary file.<br><br>'
+            'The input data can be : plain text, or formatted text (Microsoft Office or HTML).<br><br>'
             '<font color="blue"><b>Step 1</b></font> can compress your data using <b>ZLIB</b>, or <b>BZ2</b>. This step is optional.<br>'
             '<font color="blue"><b>Step 2</b></font> is the real encryption, for example with <b>AES</b>, or <b>Blowfish</b>. '
             'The password is used only in this step. '
             'For <b>RSA</b> encryption, along with the password, you have to type the path to the public or private RSA key.<br>'
             '<font color="blue"><b>Step 3</b></font> will encode your data. This step is required, the rest are optional. '
             'There are a lot of encodings available, for example <b>Base64</b>, or <b>HEX</b>.<br><br>'
-            'This FREE program is distributed in the hope that it will be useful.<br><br>'
+            'This FREE program is distributed in the hope that it will be useful, but without any warranty.<br><br>'
             'Enjoy!')
         #
 

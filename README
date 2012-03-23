@@ -89,7 +89,7 @@
     must be in JSON format;
   * config file. You can change the theme, the width and height;
   * command line;
-  * attachments.
+  * a lot of bug fixes.
 
  = Version 0.4 brings the following changes :=
   * password enhancement. The key is derived from original password (using PBKDF2)
