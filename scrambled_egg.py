@@ -895,8 +895,8 @@ class Window(QtGui.QMainWindow):
         self.layout.addWidget(self.rightText,           8, 7, 32, 5)
 
         self.layout.addWidget(self.setFormatting,       40, 2, 1, 1)
-        self.layout.addWidget(self.showHTML,            40, 3, 1, 1)
-        self.layout.addWidget(self.setTags,             40, 4, 1, 1)
+        self.layout.addWidget(self.setTags,             40, 3, 1, 1)
+        self.layout.addWidget(self.showHTML,            40, 4, 1, 1)
         self.layout.addWidget(self.loadFile,            40, 7, 1, 1)
         self.layout.addWidget(self.saveFile,            40, 8, 1, 1)
         self.layout.addWidget(self.helpButton,          40, 9, 1, 1)
@@ -1167,10 +1167,10 @@ class Window(QtGui.QMainWindow):
     def cleanupHtml(self, txt):
         #
         def spacerepl(matchobj):
-            return matchobj.group(0).replace(' ', '&nbsp;')
+            return matchobj.group(0).replace(b' ', b'&nbsp;')
 
         # Replacing all spaces with &nbsp;
-        txt = re.sub('>([^<>]+)<(?!/style>)', spacerepl, txt)
+        txt = re.sub(b'>([^<>]+)<(?!/style>)', spacerepl, txt)
         # Write the new file
         open('doc.htm', 'w').write(txt)
 
@@ -1178,20 +1178,22 @@ class Window(QtGui.QMainWindow):
         if platform.uname()[0].lower() == 'windows':
             p = subprocess.Popen(['tidy.exe', '-config', 'tidy.txt', 'doc.htm']).wait()
         elif platform.uname()[0].lower() == 'linux':
-            p = subprocess.Popen(['tidy', '-config', 'tidy.txt', 'doc.htm']).wait()
+            p = subprocess.Popen(['./tidy', '-config', 'tidy.txt', 'doc.htm']).wait()
         else:
             print('Platform `%s` is not supported yet!\n' % platform.uname()[0])
             return ''
 
         txt = open('doc.htm', 'r').read()
         # Delete the wrong/ obsolete tags
-        txt = txt.replace(u'<meta name="generator" content="HTML Tidy for Windows (vers 25 March 2009), see www.w3.org">\n', '')
-        txt = txt.replace(u'<meta name="qrichtext" content="1">\n', '')
-        txt = txt.replace(u'<title></title>\n', '')
-        txt = txt.replace(u'</style>\n\n<style type="text/css">\n', '')
-        txt = txt.replace(u'<br>\n', '\n')
+        txt = txt.replace(b'<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"\n"http://www.w3.org/TR/html4/loose.dtd">\n', '')
+        txt = txt.replace(b'<meta name="generator" content="HTML Tidy for Windows (vers 25 March 2009), see www.w3.org">\n', '')
+        txt = txt.replace(b'<meta name="generator" content="HTML Tidy for Linux (vers 25 March 2009), see www.w3.org">\n', '')
+        txt = txt.replace(b'<meta name="qrichtext" content="1">\n', '')
+        txt = txt.replace(b'<title></title>\n', '')
+        txt = txt.replace(b'</style>\n\n<style type="text/css">\n', '')
+        txt = txt.replace(b'<br>\n', '\n')
         # The clean file, for debug...
-        #open('doc.htm', 'w').write(txt)
+        open('doc.htm', 'w').write(txt)
 
         return txt
         #
