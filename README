@@ -51,17 +51,17 @@
   * Python Crypto. Data is crypted in AES, Blowfish, DES3, etc. (www.pycrypto.org)
   * PyQt4. Graphical user interface and PNG image with Qt. (www.riverbankcomputing.co.uk/software/pyqt)
   * Included with this program and not required, but very important to mention:
-    * Padding. Author: Peio Popov.
+    * HTML Tidy. Author: Dave Raggett.
     * PBKDF2. Author: Dwayne C. Litzenberger.
 
 ---------------
   How to use:
 ---------------
-  * Graphical user interface can be accesed by opening "scrambled_egg.py" source directly.
-  * The text must be written in the left text-box. It's pretty intuitive.
+  * Graphical user interface can be accesed by executing "python scrambled_egg.py".
+  * The text you want to encrypt must be written in the left text-box. Pretty intuitive.
     All buttons have tooltips, with descriptions.
   * The password is not stored, there is NO WAY to recover it, if you forget it.
-    So make sure you remember your passwords.
+    So MAKE SURE you remember your passwords.
   * RSA public/ private key must be larger than 1024 and multiple by 256.
     Valid key formats are PEM and DER. The data is encrypted using the password
     with RSA and Blowfish. The password should not be larger than 128 characters,

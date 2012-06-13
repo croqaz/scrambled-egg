@@ -19,9 +19,8 @@ import bz2, zlib
 import tarfile
 
 import binascii as ba
-from collections import OrderedDict
-from cStringIO import StringIO
-from Padding import appendPadding, removePadding
+try: from collections import OrderedDict
+except: OrderedDict = dict
 from pbkdf2 import PBKDF2
 
 from Crypto.Cipher import AES
@@ -209,9 +208,9 @@ class ScrambledEgg():
         #
         # Encryption operation.
         if o:
-            temp = appendPadding(txt, blocksize=16)
-            txt = o.encrypt(temp)
-            del temp
+            pad_len = 16 - (len(txt) % 16)
+            padding = (chr(pad_len) * pad_len)
+            txt = o.encrypt(txt + padding)
         #
         # Codec operation.
         if post in ['Base64 Codec', 'Base64 Codec']:
@@ -368,7 +367,8 @@ class ScrambledEgg():
         if o:
             try:
                 temp = o.decrypt(txt)
-                txt = removePadding(temp, 16)
+                pad_len = ord(temp[-1])
+                txt = temp[:-pad_len]
                 del temp
             except: self.__error(2, pre, enc, post) ; return
         #
