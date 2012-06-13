@@ -1604,6 +1604,11 @@ if __name__ == '__main__':
     if sys.argv[1:]:
         exit(commandLine())
 
+    # For Linux systems, make tidy executable
+    if platform.uname()[0].lower() == 'linux':
+        try: os.system('chmod +x tidy')
+        except: pass
+
     C = loadConfig()
     D = loadThemes()
     app = QtGui.QApplication(sys.argv)
