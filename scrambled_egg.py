@@ -1178,15 +1178,17 @@ class Window(QtGui.QMainWindow):
         if platform.uname()[0].lower() == 'windows':
             p = subprocess.Popen(['tidy.exe', '-config', 'tidy.txt', 'doc.htm']).wait()
         elif platform.uname()[0].lower() == 'linux':
-            p = subprocess.Popen(['./tidy', '-config', 'tidy.txt', 'doc.htm']).wait()
+            env = os.environ
+            env.update({'LD_LIBRARY_PATH': os.getcwd()})
+            p = subprocess.Popen(['./tidy', '-config', 'tidy.txt', 'doc.htm'], env=env).wait()
         else:
             print('Platform `%s` is not supported yet!\n' % platform.uname()[0])
-            return ''
 
         txt = open('doc.htm', 'r').read()
         # Delete the wrong/ obsolete tags
         txt = txt.replace(b'<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"\n"http://www.w3.org/TR/html4/loose.dtd">\n', '')
         txt = txt.replace(b'<meta name="generator" content="HTML Tidy for Windows (vers 25 March 2009), see www.w3.org">\n', '')
+        txt = txt.replace(b'<meta name="generator" content="HTML Tidy for Linux/x86 (vers 25 March 2009), see www.w3.org">\n', '')
         txt = txt.replace(b'<meta name="generator" content="HTML Tidy for Linux (vers 25 March 2009), see www.w3.org">\n', '')
         txt = txt.replace(b'<meta name="qrichtext" content="1">\n', '')
         txt = txt.replace(b'<title></title>\n', '')
