@@ -3,6 +3,7 @@ import wx
 import time
 import unittest
 import binascii as ba
+
 from Crypto import Random
 from Crypto.Random import random
 
@@ -52,31 +53,36 @@ class TestGui(unittest.TestCase):
 
     def testEncr(self):
         #
-        # Results list
-        results = []
+        # _encrults list
+        _encrults = []
         #
         for pre in _SCRAMBLE_D:
             for enc in _ENC:
                 for post in _ENCODE_D:
-                    #
+
+                    encr_result = False
+                    decr_result = False
                     self.frame.leftText.Clear()
                     self.frame.linePasswordL.Clear()
-                    #
-                    # IGNORE Quopri, it's still UNSTABLE.
+                    self.frame.onCryptMode(None)
+
+                    # IGNORE Quopri, it's UNSTABLE.
                     if post == 'Quopri Codec': continue
                     if enc == 'RSA': continue
-                    #
+
                     txt = RandText()
                     pwd = RandPassword()
-                    #
-                    if len(pwd) % 2:
-                        print 'No tags',
+                    tags = len(pwd) % 2
+
+                    # BEGIN ENCRYPTION
+                    if tags:
                         self.frame.setTags.SetValue(True)
-                        res = self.SE.encrypt(txt, pre, enc, post, pwd, False)
+                        _encr = self.SE.encrypt(txt, pre, enc, post, pwd, True)
+                        _decr = self.SE.decrypt(_encr, None, None, None, pwd)
                     else:
-                        print 'With tags',
                         self.frame.setTags.SetValue(False)
-                        res = self.SE.encrypt(txt, pre, enc, post, pwd, True)
+                        _encr = self.SE.encrypt(txt, pre, enc, post, pwd, False)
+                        _decr = self.SE.decrypt(_encr, post, enc, pre, pwd)
                     #
                     self.frame.preProcess.SetValue(pre)
                     self.frame.comboCrypt.SetValue(enc)
@@ -84,17 +90,40 @@ class TestGui(unittest.TestCase):
                     self.frame.linePasswordL.SetValue(pwd)
                     self.frame.leftText.SetValue(txt)
                     #
-                    gui_res = self.frame.rightText.GetValue()
-                    self.frame.Update()
+                    gui_encr = self.frame.rightText.GetValue()
+                    encr_result = (_encr == gui_encr)
+                    time.sleep(0.1)
+
+                    # BEGIN DECRYPTION
+                    self.frame.rightText.Clear()
+                    self.frame.linePasswordR.Clear()
+                    self.frame.preDecrypt.SetValue(pre)
+                    self.frame.comboDecrypt.SetValue(enc)
+                    self.frame.postDecrypt.SetValue(post)
+                    self.frame.onDecryptMode(None)
+                    self.frame.linePasswordR.SetValue(pwd)
+                    self.frame.rightText.SetValue(_encr)
                     #
-                    print 'Test `%s %s %s` -> %s. Pwd len=%i, Txt len=%i.' % \
-                        (pre, enc, post, res==gui_res, len(pwd), len(txt))
-                    results.append(res == gui_res)
-                    #
+                    gui_decr = self.frame.leftText.GetValue()
+                    decr_result = (_decr == gui_decr)
                     time.sleep(0.1)
                     #
+                    self.frame.Update()
+
+                    if encr_result and decr_result:
+                        print 'PASSED test `%s %s %s %s`. Pwd len=%i, Txt len=%i.' % \
+                            (pre, enc, post, tags, len(pwd), len(txt))
+                    else:
+                        print 'FAILED test `{pre} {enc} {post} {tags}`! Pwd len={len_pwd}, Txt len={len_txt}.\n' \
+                            'SE encr={len_encr} , GUI encr={len_gencr} ; SE decr={len_decr} , GUI decr={len_dencr}'.format(
+                                pre=pre, enc=enc, post=post, tags=tags, len_pwd=len(pwd), len_txt=len(txt),
+                                len_encr=len(_encr), len_gencr=len(gui_encr),
+                                len_decr=len(_decr), len_dencr=len(gui_decr),)
+                    #
+                    _encrults.append(encr_result and decr_result)
+                    #
         #
-        self.assertEqual(len(results), sum(results))
+        self.assertEqual(len(_encrults), sum(_encrults))
         #
 
 #

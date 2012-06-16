@@ -1,7 +1,6 @@
 
 import re
 import wx
-import wx.richtext as rt
 
 from scrambled_egg import ScrambledEgg, NO_TAGS, __version__
 from scrambled_egg import SCRAMBLE, SCRAMBLE_D, ENC, ENCODE, ENCODE_D
@@ -61,7 +60,8 @@ class Window(wx.Frame):
 
         # Left check boxes
         bbagl = wx.BoxSizer(wx.HORIZONTAL)
-        self.setTags    = wx.CheckBox(panel, -1, size=(105, 25), label='No tags')   # Left side
+        self.setTags    = wx.CheckBox(panel, -1, size=(105, 25), label='Tags')   # Left side
+        self.setTags.SetValue(True)
         self.nrLettersL = wx.StaticText(panel, -1, '')
         #
         bbagl.Add(self.setTags,    proportion=5, flag=wx.EXPAND)
@@ -228,13 +228,8 @@ class Window(wx.Frame):
             return
 
         pwd = self.linePasswordL.GetValue().encode()
-        tags = not self.setTags.GetValue()
+        tags = self.setTags.GetValue()
         txt = self.leftText.GetValue().encode()
-
-        # Setup default (no error) status.
-        if self.buttonCryptMode.GetValue():
-            self.statusBar.SetForegroundColour(wx.BLUE)
-            self.statusBar.SetStatusText(' Encryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post))
 
         self.postDecrypt.SetSelection(self.postProcess.GetCurrentSelection())
         self.comboDecrypt.SetSelection(self.comboCrypt.GetCurrentSelection())
@@ -245,6 +240,7 @@ class Window(wx.Frame):
 
         if final:
             self.statusBar.SetForegroundColour(wx.BLUE)
+            self.statusBar.SetStatusText(' Encryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post))
             self.rightText.SetValue(final)
             self.nrLettersL.SetLabel('Plain: %i' % len(txt))
             self.nrLettersR.SetLabel('  Enc: %i' % len(final))
@@ -259,7 +255,7 @@ class Window(wx.Frame):
         if not self.buttonDecryptMode.GetValue():
             return
 
-        txt = self.rightText.GetValue()
+        txt = self.rightText.GetValue().encode()
 
         try:
             re_groups = re.search(NO_TAGS, txt).groups()
@@ -302,15 +298,11 @@ class Window(wx.Frame):
         pre = self.postDecrypt.GetValue()
         enc = self.comboDecrypt.GetValue()
         post = self.preDecrypt.GetValue()
-        pwd = self.linePasswordR.GetValue()
+        pwd = self.linePasswordR.GetValue().encode()
 
         if not txt:
             self.leftText.Clear()
             return
-
-        if self.buttonDecryptMode.GetValue():
-            self.statusBar.SetForegroundColour(wx.BLUE)
-            self.statusBar.SetStatusText(' Decryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post))
 
         self.preProcess.SetSelection(self.preDecrypt.GetCurrentSelection())
         self.comboCrypt.SetSelection(self.comboDecrypt.GetCurrentSelection())
@@ -321,6 +313,7 @@ class Window(wx.Frame):
 
         if final:
             self.statusBar.SetForegroundColour(wx.BLUE)
+            self.statusBar.SetStatusText(' Decryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post))
             self.leftText.SetValue(final)
             self.nrLettersL.SetLabel('Plain: %i' % len(final))
             self.nrLettersR.SetLabel('  Enc: %i' % len(txt))
