@@ -480,7 +480,7 @@ class Window(QtGui.QMainWindow):
 
             vDlg.btnSave = QtGui.QPushButton('Save', vDlg)
             vDlg.btnSave.clicked.connect(
-                lambda: vDlg.text.toPlainText().encode('latin1')
+                lambda: vDlg.accept()
             )
             vDlg.btnCancel = QtGui.QPushButton('Cancel', vDlg)
             vDlg.btnCancel.clicked.connect(
@@ -494,7 +494,8 @@ class Window(QtGui.QMainWindow):
             vDlg.setLayout(layout)
             vRes = vDlg.exec_()
 
-            print vRes
+            if vRes:
+                self.leftText.setHtml( vDlg.text.toPlainText().encode('latin1') )
 
             self.showHTML.setChecked(False)
         #
@@ -528,18 +529,13 @@ class Window(QtGui.QMainWindow):
         pwd = self.linePasswordL.text().encode()
         tags = not self.setTags.isChecked()
         #
-        if self.setFormatting.isChecked() and not self.showHTML.isChecked():
+        if self.setFormatting.isChecked():
             # HTML string.
             txt = self.leftText.toHtml().encode('utf-8')
             # Cleanup HTML string.
-            #txt = self.cleanupHtml(txt)
+            txt = self.cleanupHtml(txt)
         else:
             txt = self.leftText.toPlainText().encode('utf-8')
-        #
-        # Setup default (no error) status.
-        if self.buttonCryptMode.isChecked():
-            self.textBar.setStyleSheet(D['TXT_BAR_OK'])
-            self.textBar.setText('  Encryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post))
         #
         self.postDecrypt.setCurrentIndex(self.preProcess.currentIndex())
         self.comboDecrypt.setCurrentIndex(self.comboCrypt.currentIndex())
@@ -555,6 +551,8 @@ class Window(QtGui.QMainWindow):
             else:
                 self.nrLettersL.setText('Text: %i' % len(txt))
             self.nrLettersR.setText('Enc: %i' % len(final))
+            self.textBar.setStyleSheet(D['TXT_BAR_OK'])
+            self.textBar.setText('  Encryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post))
         else:
             self.rightText.clear()
             self.textBar.setStyleSheet(D['TXT_BAR_BAD'])
@@ -625,10 +623,6 @@ class Window(QtGui.QMainWindow):
             self.leftText.clear()
             return
         #
-        if self.buttonDecryptMode.isChecked():
-            self.textBar.setStyleSheet(D['TXT_BAR_OK'])
-            self.textBar.setText('  Decryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post))
-        #
         self.preProcess.setCurrentIndex(self.postDecrypt.currentIndex())
         self.comboCrypt.setCurrentIndex(self.comboDecrypt.currentIndex())
         self.postProcess.setCurrentIndex(self.preDecrypt.currentIndex())
@@ -637,12 +631,12 @@ class Window(QtGui.QMainWindow):
         final = self.SE.decrypt(txt, pre, enc, post, pwd)
         #
         if final:
-            # Cleanup HTML string.
-            #final = self.cleanupHtml(final)
             # Setup string as HTML.
             self.leftText.setHtml(final.decode())
             self.nrLettersL.setText('Dec: %i' % len(final))
             self.nrLettersR.setText('Enc: %i' % len(txt))
+            self.textBar.setStyleSheet(D['TXT_BAR_OK'])
+            self.textBar.setText('  Decryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post))
         else:
             self.leftText.clear()
             self.textBar.setStyleSheet(D['TXT_BAR_BAD'])

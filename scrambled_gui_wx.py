@@ -5,6 +5,7 @@
 # Blog : http://cristi-constantin.com.
 # ---
 
+import os
 import re
 import wx
 
@@ -58,7 +59,7 @@ class Window(wx.Frame):
 
         # Password bag left
         pbagl = wx.BoxSizer(wx.HORIZONTAL)
-        self.linePasswordL = wx.TextCtrl(panel, -1)  # Left password line
+        self.linePasswordL = wx.TextCtrl(panel, -1, style=wx.TE_PASSWORD)  # Left password line
         self.checkPwdL   = wx.CheckBox(panel, -1, size=(85, -1), label='<- Pwd') # Left side
         #
         pbagl.Add(self.linePasswordL, proportion=5, flag=wx.EXPAND)
@@ -104,7 +105,7 @@ class Window(wx.Frame):
 
         # Password bag right
         pbagr = wx.BoxSizer(wx.HORIZONTAL)
-        self.linePasswordR =  wx.TextCtrl(panel, -1)  # Right password line
+        self.linePasswordR =  wx.TextCtrl(panel, -1, style=wx.TE_PASSWORD)  # Right password line
         self.checkPwdR    = wx.CheckBox(panel, -1, size=(85, -1), label='<- Pwd') # Right side
         #
         pbagr.Add(self.linePasswordR, proportion=5, flag=wx.EXPAND)
@@ -153,6 +154,14 @@ class Window(wx.Frame):
         self.linePasswordR.Bind(wx.EVT_TEXT, self.onRightTextChanged)
         self.rightText.Bind(wx.EVT_TEXT, self.onRightTextChanged)
 
+        self.checkPwdL.Bind(wx.EVT_CHECKBOX, lambda x: \
+            self.linePasswordL.SetWindowStyle(0) if self.checkPwdL.IsChecked() \
+            else self.linePasswordL.SetWindowStyle(wx.TE_PASSWORD))
+
+        self.checkPwdR.Bind(wx.EVT_CHECKBOX, lambda x: \
+            self.linePasswordR.SetWindowStyle(0) if self.checkPwdR.IsChecked() \
+            else self.linePasswordR.SetWindowStyle(wx.TE_PASSWORD))
+
         self.preProcess.Bind(wx.EVT_COMBOBOX, self.onLeftTextChanged)
         self.comboCrypt.Bind(wx.EVT_COMBOBOX, self.onLeftTextChanged)
         self.postProcess.Bind(wx.EVT_COMBOBOX, self.onLeftTextChanged)
@@ -161,6 +170,8 @@ class Window(wx.Frame):
         self.comboDecrypt.Bind(wx.EVT_COMBOBOX, self.onRightTextChanged)
         self.postDecrypt.Bind(wx.EVT_COMBOBOX, self.onRightTextChanged)
 
+        self.saveFile.Bind(wx.EVT_BUTTON, self.onSave)
+        self.loadFile.Bind(wx.EVT_BUTTON, self.onLoad)
         self.helpButton.Bind(wx.EVT_BUTTON, self.onHelp)
 
         # ACTION !
@@ -288,8 +299,6 @@ class Window(wx.Frame):
             if not post:
                 post = tags.split(':')[0]
 
-            # <#>ZL:B:H<#>fcef508d0b565c9936fa500ef517ed4b
-
             pre = {ENCODE_D[k]:k for k in ENCODE_D}[pre]
             enc = {ENC[k]:k for k in ENC}[enc]
             post = {SCRAMBLE_D[k]:k for k in SCRAMBLE_D}[post]
@@ -327,6 +336,51 @@ class Window(wx.Frame):
             self.leftText.Clear()
             self.statusBar.SetForegroundColour(wx.RED)
             self.statusBar.SetStatusText(self.SE.error)
+
+
+    def onSave(self, e):
+
+        # Save all pre/enc/post operations.
+        pre = self.preProcess.GetValue()
+        enc = self.comboCrypt.GetValue()
+        post = self.postProcess.GetValue()
+
+        # TO FIX !!!
+
+        # if post in ['Base64 Codec', 'Base32 Codec', 'HEX Codec']:
+        #     wildcard = '*.png'
+        # elif post=='XML':
+        #     wildcard = '*.xml'
+        # elif post=='Json':
+        #     wildcard = '*.json'
+        # else:
+        #     path = f.getSaveFileName(self, 'Save crypted text', os.getcwd(), 'All files (*.*)')
+        #     wildcard = '*.*'
+
+        # f = wx.FileDialog(self, message='Save crypted text', defaultDir=os.getcwd(), wildcard=wildcard)
+        # r = f.ShowModal()
+        # if not r: return
+        # path = f.GetPath()
+        # if not path: return
+
+        # # Save password.
+        # pwd = self.linePasswordL.GetValue()
+        # # Text from rigth side.
+        # txt = self.rightText.GetValue()
+        # # File extension.
+        # if not os.path.splitext(path)[1]:
+        #     path += wildcard[1:]
+
+        # # For PNG files.
+        # if wildcard=='*.png':
+        #     self.SE.toImage(txt, pre, enc, post, pwd, path, encrypt=False)
+        # else:
+        #     open(path, 'w').write(txt)
+
+
+    def onLoad(self, e):
+
+        pass
 
 
     def onHelp(self, e):
