@@ -1,4 +1,10 @@
 
+# ---
+# An application by Cristi Constantin,
+# E-mail : cristi.constantin@live.com,
+# Blog : http://cristi-constantin.com.
+# ---
+
 import re
 import wx
 
