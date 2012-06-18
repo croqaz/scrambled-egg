@@ -133,4 +133,8 @@ if PASSED:
 else:
     log.warning('NOT ALL TESTS PASSED! :(')
 
+os.remove('test.data')
+os.remove('output.dat')
+os.remove('decrypt.dat')
+
 # Eof()

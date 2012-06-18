@@ -8,7 +8,7 @@ from Crypto import Random
 from Crypto.Random import random
 
 import scrambled_egg
-import scrambled_gui
+import scrambled_gui_wx
 
 _SCRAMBLE_D = scrambled_egg.SCRAMBLE_D
 del _SCRAMBLE_D['None']
@@ -30,7 +30,7 @@ def RandText():
 
 def RandPassword():
     # Returns a random password between 1 and 196.
-    L = random.randrange(1, 196)
+    L = random.randrange(3, 196)
     pwd = []
     for i in range(L):
         # From 'space' to '~'.
@@ -45,16 +45,16 @@ class TestGui(unittest.TestCase):
 
     def setUp(self):
         self.app = wx.App()
-        self.frame = scrambled_gui.Window()
+        self.frame = scrambled_gui_wx.Window()
         self.SE = scrambled_egg.ScrambledEgg()
 
     def tearDown(self):
         self.frame.Destroy()
 
-    def testEncr(self):
+    def test1(self, crash=False):
         #
-        # _encrults list
-        _encrults = []
+        # results list
+        results = []
         #
         for pre in _SCRAMBLE_D:
             for enc in _ENC:
@@ -101,9 +101,14 @@ class TestGui(unittest.TestCase):
                     self.frame.comboDecrypt.SetValue(enc)
                     self.frame.postDecrypt.SetValue(post)
                     self.frame.onDecryptMode(None)
-                    self.frame.linePasswordR.SetValue(pwd)
+
+                    # On crash test, use a wrong password
+                    if crash:
+                        self.frame.linePasswordR.SetValue(pwd[1:])
+                    else:
+                        self.frame.linePasswordR.SetValue(pwd)
                     self.frame.rightText.SetValue(_encr)
-                    #
+
                     gui_decr = self.frame.leftText.GetValue()
                     decr_result = (_decr == gui_decr)
                     time.sleep(0.1)
@@ -120,10 +125,19 @@ class TestGui(unittest.TestCase):
                                 len_encr=len(_encr), len_gencr=len(gui_encr),
                                 len_decr=len(_decr), len_dencr=len(gui_decr),)
                     #
-                    _encrults.append(encr_result and decr_result)
+                    results.append(encr_result and decr_result)
                     #
         #
-        self.assertEqual(len(_encrults), sum(_encrults))
+        if crash:
+            return results
+        else:
+            self.assertEqual(len(results), sum(results))
+        #
+
+    def test2(self):
+        #
+        results = self.test1(crash=True)
+        self.assertEqual(sum(results), 0)
         #
 
 #

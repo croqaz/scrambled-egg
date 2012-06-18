@@ -184,13 +184,13 @@ class ScrambledEgg():
             raise TypeError('Invalid data type for encryption: "%s" !' % str(type(txt)))
         #
         # Scramble operation.
-        if pre in ['None', 'None']:
+        if not pre or pre == 'N' or pre == 'None':
             pass
-        elif pre in ['ZLIB', 'ZLIB']:
+        elif pre == 'ZLIB' or pre == SCRAMBLE_D['ZLIB']:
             txt = zlib.compress(txt)
-        elif pre in ['BZ2', 'BZ2']:
+        elif pre == 'BZ2' or pre == SCRAMBLE_D['BZ2']:
             txt = bz2.compress(txt)
-        elif pre in ['ROT13', 'ROT13']:
+        elif pre == 'ROT13' or pre == SCRAMBLE_D['ROT13']:
             txt = string.translate(txt, ROT)
         else:
             raise Exception('Invalid scramble "%s" !' % pre)
@@ -203,20 +203,20 @@ class ScrambledEgg():
         #
         pwd = self._fix_password(pwd, enc)
         #
-        if enc in ['AES', 'AES']:
-            o = AES.new(pwd, mode=2)
-        elif enc in ['ARC2', 'ARC2']:
-            o = ARC2.new(pwd, mode=2)
-        elif enc in ['CAST', 'CAST']:
-            o = CAST.new(pwd, mode=2)
-        elif enc in ['Blowfish', 'Blowfish']:
-            o = Blowfish.new(pwd, mode=2)
-        elif enc in ['DES3', 'DES3']:
-            o = DES3.new(pwd, mode=2)
-        elif enc in ['RSA', 'RSA']:
+        if enc == 'AES' or enc == ENC['AES']:
+            o = AES.new(pwd, mode=3, segment_size=16)
+        elif enc == 'ARC2' or enc == ENC['ARC2']:
+            o = ARC2.new(pwd, mode=3, segment_size=16)
+        elif enc == 'CAST' or enc == ENC['CAST']:
+            o = CAST.new(pwd, mode=3, segment_size=16)
+        elif enc == 'Blowfish' or enc == ENC['Blowfish']:
+            o = Blowfish.new(pwd, mode=3, segment_size=16)
+        elif enc == 'DES3' or enc == ENC['DES3']:
+            o = DES3.new(pwd, mode=3, segment_size=16)
+        elif enc == 'RSA' or enc == ENC['RSA']:
             # Using Blowfish encryption for RSA.
-            o = Blowfish.new(pwd, mode=3)
-        elif not enc or enc in ['None', 'None']:
+            o = Blowfish.new(pwd, Blowfish.MODE_CFB)
+        elif not enc or enc in ['None', ENC['None']]:
             o = None
         else:
             raise Exception('Invalid encryption mode "%s" !' % enc)
@@ -228,38 +228,38 @@ class ScrambledEgg():
             txt = o.encrypt(txt + padding)
         #
         # Codec operation.
-        if post in ['Base64 Codec', 'Base64 Codec']:
+        if post == 'Base64 Codec' or post == ENCODE_D['Base64 Codec']:
             if tags:
                 txt = '<#>%s:%s:%s<#>%s' % \
                     (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec',''), ba.b2a_base64(txt).decode())
             else:
                 txt = ba.b2a_base64(txt).decode()
-        elif post in ['Base32 Codec', 'Base32 Codec']:
+        elif post == 'Base32 Codec' or post ==  ENCODE_D['Base32 Codec']:
             if tags:
                 txt = '<#>%s:%s:%s<#>%s' % \
                     (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec',''), base64.b32encode(txt).decode())
             else:
                 txt = base64.b32encode(txt).decode()
-        elif post in ['HEX Codec', 'HEX Codec']:
+        elif post == 'HEX Codec'or post == ENCODE_D['HEX Codec']:
             if tags:
                 txt = '<#>%s:%s:%s<#>%s' % \
                     (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec',''), ba.b2a_hex(txt).decode())
             else:
                 txt = ba.b2a_hex(txt).decode()
-        elif post in ['Quopri Codec', 'Quopri Codec']:
+        elif post == 'Quopri Codec' or post == ENCODE_D['Quopri Codec']:
             if tags:
                 txt = '<#>%s:%s:%s<#>%s' % (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post].replace(' Codec',''), \
                     ba.b2a_qp(txt, quotetabs=True, header=True).decode())
             else:
                 txt = ba.b2a_qp(txt, quotetabs=True, header=True).decode()
-        elif post in ['Json', 'Json']:
+        elif post == 'Json' or post == ENCODE_D['Json']:
             if tags:
                 # Format : {"pre": "AAA", "enc": "BBB", "post": "CCC", "data": "Blah blah blah"}
                 txt = '{"pre": "%s", "enc": "%s", "post": "%s", "data": "%s"}' % \
                     (SCRAMBLE_D[pre], ENC[enc], ENCODE_D[post], ba.b2a_base64(txt).rstrip().decode())
             else:
                 txt = json.dumps({'data':ba.b2a_base64(txt).rstrip().decode()})
-        elif post in ['XML', 'XML']:
+        elif post == 'XML':
             if tags:
                 # Format : <root><pre>AAA</pre> <enc>BBB</enc> <post>CCC</post> <data>Blah blah blah</data></root>
                 txt = '<root>\n<pre>%s</pre><enc>%s</enc><post>%s</post>\n<data>%s</data>\n</root>' % \
@@ -290,7 +290,7 @@ class ScrambledEgg():
                 txt = temp['data'].encode()
                 del temp
             elif '<data>' in txt and '</data>' in txt:
-                txt = re.search('<data>(.+)</data>', txt, re.S).group(1).encode()
+                txt = re.search('<data>(.+)</data>', txt, re.S).group(1)
             else:
                 txt = re.sub(NO_TAGS, '', txt)
 
@@ -300,11 +300,12 @@ class ScrambledEgg():
                 pre = 'Json'
                 temp = json.loads(txt.decode())
                 txt = temp['data'].encode()
+                del temp
 
             # If XML.
             elif '<data>' in txt and '</data>' in txt:
                 pre = 'XML'
-                txt = re.search('<data>(.+)</data>', txt, re.S).group(1).encode()
+                txt = re.search('<data>(.+)</data>', txt, re.S).group(1)
 
             else:
                 txt = re.sub(NO_TAGS, '', txt)
@@ -343,19 +344,19 @@ class ScrambledEgg():
             raise Exception('Invalid codec "%s" !' % pre)
         #
         if enc == 'AES' or enc == ENC['AES']:
-            o = AES.new(pwd, mode=2)
+            o = AES.new(pwd, mode=3, segment_size=16)
         elif enc == 'ARC2' or enc == ENC['ARC2']:
-            o = ARC2.new(pwd, mode=2)
+            o = ARC2.new(pwd, mode=3, segment_size=16)
         elif enc == 'CAST' or enc == ENC['CAST']:
-            o = CAST.new(pwd, mode=2)
+            o = CAST.new(pwd, mode=3, segment_size=16)
         elif enc == 'Blowfish' or enc == ENC['Blowfish']:
-            o = Blowfish.new(pwd, mode=2)
+            o = Blowfish.new(pwd, mode=3, segment_size=16)
         elif enc == 'DES3' or enc == ENC['DES3']:
-            o = DES3.new(pwd, mode=2)
-        elif enc == 'RSA':
+            o = DES3.new(pwd, mode=3, segment_size=16)
+        elif enc == 'RSA' or enc == ENC['RSA']:
             # Using Blowfish decryption for RSA.
-            o = Blowfish.new(pwd, mode=3)
-        elif not enc or enc == 'None':
+            o = Blowfish.new(pwd, mode=3, segment_size=16)
+        elif not enc or enc in ['None', ENC['None']]:
             o = None
         else:
             raise Exception('Invalid decrypt "%s" !' % enc)

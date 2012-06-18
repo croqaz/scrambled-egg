@@ -8,6 +8,7 @@
  - About
  - Licence
  - Requirements
+ - How to install
  - How to use
  - Known Issues and Limitations
  - What's new
@@ -20,8 +21,8 @@
 
  - easily encrypt your data using AES, ARC2, Blowfish, CAST, DES3 or RSA Public-key
     then encode the result in a printable form, using Base64, Base32, HEX, Quopri,
-    string escape, UU, XML or Json;
- - the resulted string can be sent on e-mail as text, saved as XML, Json or UU,
+    XML or Json;
+ - the resulted string can be sent on e-mail as text, saved as XML, Json,
     or can be transformed into a little PNG image;
  - website : http://scrambled-egg.googlecode.com
 
@@ -47,17 +48,32 @@
 -----------------
   Requirements:
 -----------------
-  * Python 2.6/2.7. Scrambled-Egg is written in Python 2.7. (www.python.org)
-  * Python Crypto. Data is crypted in AES, Blowfish, DES3, etc. (www.pycrypto.org)
-  * PyQt4. Graphical user interface and PNG image with Qt. (www.riverbankcomputing.co.uk/software/pyqt)
+  * Python 2.6/ 2.7. Scrambled-Egg is written in Python 2.7. (www.python.org)
+  * Python Crypto 2.5/ 2.6. Data is crypted in AES, Blowfish, DES3, etc. (www.pycrypto.org)
+  * wxPython. Simple graphical user interface. (www.wxpython.org)
+  * PyQt4. Alternative graphical user interface and PNG image with Qt.
+    (www.riverbankcomputing.co.uk/software/pyqt)
   * Included with this program and not required, but very important to mention:
-    * HTML Tidy. Author: Dave Raggett.
-    * PBKDF2. Author: Dwayne C. Litzenberger.
+    * HTML Tidy - used only in Qt GUI. Author: Dave Raggett.
+
+------------------
+  How to install:
+------------------
+  * In Linux, if you don't have pyCrypto, first install `Python-DEV`, then `python-pip`,
+    then `sudo pip install pycrypto`. This will install the command line version.
+  * To install the GUI, use `sudo pip install wxpython`, or `install pyqt4`.
+    You don't need to install the both GUI versions. WX is a simpler version,
+    Qt looks much better, but it's a little less stable.
+  * In Windows, download the precompiled ZIP file and you should be fine.
+  * If you feel adventurous, install PyCrypto 2.5 for Windows from Activestate Code,
+    PyQt4 or wxPython, and hack away :)
 
 ---------------
   How to use:
 ---------------
-  * Graphical user interface can be accesed by executing "python scrambled_egg.py".
+  * Graphical user interface can be accesed in 2 ways, depending on your preference:
+    You can execute "python scrambled_gui_wx.py", if you have wxPython, or
+    "python scrambled_gui_qt.py", if you have PyQt. PyQt looks much better.
   * The text you want to encrypt must be written in the left text-box. Pretty intuitive.
     All buttons have tooltips, with descriptions.
   * The password is not stored, there is NO WAY to recover it, if you forget it.
@@ -66,30 +82,36 @@
     Valid key formats are PEM and DER. The data is encrypted using the password
     with RSA and Blowfish. The password should not be larger than 128 characters,
     or it will be trimmed to 128.
+  * You can call Scrambled-Egg from command line too. Ex: to encrypt with ZLIB+ AES+ Base64:
+    python scrambled_egg.py -i input_file -o output_file --pre ZLIB --enc AES --post Base64
+    To decrypt, you call the same, but add "--decrypt true" at the end.
   * In order to access Scrambled-Egg class from Python, all you have to do is :
     "from scrambled_egg import ScrambledEgg".
   * Tested on Windows, Ubuntu, Fedora and OpenSUSE. Before releasing a version,
-    all tests must pass, random passwords from 1 to 196 characters.
+    all tests must pass, using random text and random passwords from 1 to 196 characters.
 
 ---------------------------------
   Known Issues and Limitations:
 ---------------------------------
-  * Never ever use Quopri Codec with binary files (images, music, Doc/Xls files,
+  * Never ever use Quopri Codec with binary files (images, music, Doc/ Xls files,
     exec files). The result after decoding might differ from the original file !
   * Base32 Codec is VERY slow, so never use it for large files (few MBs).
   * The GUI will freeze for a looong time if you try to encrypt/ decrypt more than
     200.000-300.000 characters !
-  * You must type a password in the Password Field, if you want to encrypt your files :)
+  * You must type a password in the PASSWORD field, if you want to encrypt your files :)
 
 ---------------
   What's new:
 ---------------
  = Version 0.5 brings the following changes :=
-  * themes. You can implement your own themes in config/themes. The theme file
-    must be in JSON format;
+  * themes for Qt GUI. You can implement your own themes in config/themes.
+    The theme file must be in JSON format;
   * config file. You can change the theme, the width and height;
+  * new gui, written in wxPython. It's simpler than Qt, but much more stable;
   * command line;
   * a lot of bug fixes.
+  * again, the changes are backwards incompatible, that means you cannot
+    decrypt text encrypted with Scrambled-Egg version 0.4.
 
  = Version 0.4 brings the following changes :=
   * password enhancement. The key is derived from original password (using PBKDF2)
