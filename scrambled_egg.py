@@ -149,6 +149,35 @@ class ScrambledEgg():
         return hash_key[:key_size]
         #
 
+    def guess_pre_enc_post(self, txt):
+
+        # Trying to identify and/or delete pre/enc/post tags.
+        re_groups = re.search(NO_TAGS, txt).groups()
+        tags = findg(re_groups)
+
+        # If Json.
+        if '{' in txt and '}' in txt and '"data":' in txt:
+            pre = 'Json'
+            temp = json.loads(txt.decode())
+            enc = temp.get('enc').encode()
+            post = temp.get('pre').encode()
+            del temp
+
+        # If XML.
+        elif '<data>' in txt and '</data>' in txt:
+            pre = 'XML'
+            enc = re.search('<enc>([0-9a-zA-Z ]{1,3})</enc>', tags).group(1)
+            post = re.search('<pre>([0-9a-zA-Z ]{1,3})</pre>', tags).group(1)
+
+        else:
+            pre = tags.split(':')[2]
+            enc = tags.split(':')[1]
+            post = tags.split(':')[0]
+
+        self.pre = {ENCODE_D[k]:k for k in ENCODE_D}.get(pre) or pre
+        self.enc = {ENC[k]:k for k in ENC}.get(enc) or enc
+        self.post = {SCRAMBLE_D[k]:k for k in SCRAMBLE_D}.get(post) or post
+
     def encrypt(self, txt, pre, enc, post, pwd, tags=True):
         #
         if type(txt) != type('') and type(txt) != type(u''):
@@ -250,38 +279,20 @@ class ScrambledEgg():
             raise TypeError('Invalid data type for decryption: "%s" !' % str(type(txt)))
         #
         if not (pre and enc and post):
-            # Trying to identify and/or delete pre/enc/post tags.
-            #try:
-            re_groups = re.search(NO_TAGS, txt).groups()
-            tags = findg(re_groups)
+            self.guess_pre_enc_post(txt)
 
-            # If Json.
+            pre = self.pre
+            enc = self.enc
+            post = self.post
+
             if '{' in txt and '}' in txt and '"data":' in txt:
-                pre = 'Json'
                 temp = json.loads(txt.decode())
-                enc = temp.get('enc').encode()
-                post = temp.get('pre').encode()
                 txt = temp['data'].encode()
-
-            # If XML.
+                del temp
             elif '<data>' in txt and '</data>' in txt:
-                pre = 'XML'
-                enc = re.search('<enc>([0-9a-zA-Z ]{1,3})</enc>', tags).group(1)
-                post = re.search('<pre>([0-9a-zA-Z ]{1,3})</pre>', tags).group(1)
-                txt = re.search('<data>(.+)</data>', txt, re.S).group(1)
-
+                txt = re.search('<data>(.+)</data>', txt, re.S).group(1).encode()
             else:
-                pre = tags.split(':')[2]
-                enc = tags.split(':')[1]
-                post = tags.split(':')[0]
                 txt = re.sub(NO_TAGS, '', txt)
-
-            pre = self.pre = pre.decode()
-            enc = self.enc = enc.decode()
-            post = self.post = post.decode()
-
-            #except:
-            #    print('Cannot decrypt, caught error with', pre, enc, post, '!')
 
         else:
             # If Json.
@@ -293,7 +304,7 @@ class ScrambledEgg():
             # If XML.
             elif '<data>' in txt and '</data>' in txt:
                 pre = 'XML'
-                txt = re.search('<data>(.+)</data>', txt, re.S).group(1)
+                txt = re.search('<data>(.+)</data>', txt, re.S).group(1).encode()
 
             else:
                 txt = re.sub(NO_TAGS, '', txt)
@@ -733,9 +744,11 @@ class ScrambledEgg():
         if ext=='.png':
             return self.fromImage(pwd, fpath, decrypt)
 
+        txt = open(fpath, 'rb').read()
+
         # For the rest of the files.
         if decrypt:
-            val = self.decrypt(open(fpath, 'rb').read(), pre, enc, post, pwd)
+            val = self.decrypt(txt, pre, enc, post, pwd)
             if not val:
                 print(self.error)
             else:
@@ -743,8 +756,8 @@ class ScrambledEgg():
 
         # Else, don't decrypt.
         else:
-            val = open(fpath, 'rb').read()
-            return val
+            self.guess_pre_enc_post(txt)
+            return txt
         #
 
 

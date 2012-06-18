@@ -141,6 +141,7 @@ class Window(wx.Frame):
 
         self.Center()
         self.Show(True)
+        self.leftText.SetFocus()
 
 
     def _bind_events(self):
@@ -329,7 +330,7 @@ class Window(wx.Frame):
         if final:
             self.statusBar.SetForegroundColour(wx.BLUE)
             self.statusBar.SetStatusText(' Decryption mode   step 1: %s ,   step 2: %s ,   step 3: %s' % (pre, enc, post))
-            self.leftText.SetValue(final)
+            self.leftText.SetValue(final.encode())
             self.nrLettersL.SetLabel('Plain: %i' % len(final))
             self.nrLettersR.SetLabel('  Enc: %i' % len(txt))
         else:
@@ -345,42 +346,62 @@ class Window(wx.Frame):
         enc = self.comboCrypt.GetValue()
         post = self.postProcess.GetValue()
 
-        # TO FIX !!!
+        if post in ['Base64 Codec', 'Base32 Codec', 'HEX Codec']:
+            wildcard = '*.png'
+        elif post=='XML':
+            wildcard = '*.xml'
+        elif post=='Json':
+            wildcard = '*.json'
+        else:
+            wildcard = '*.*'
 
-        # if post in ['Base64 Codec', 'Base32 Codec', 'HEX Codec']:
-        #     wildcard = '*.png'
-        # elif post=='XML':
-        #     wildcard = '*.xml'
-        # elif post=='Json':
-        #     wildcard = '*.json'
-        # else:
-        #     path = f.getSaveFileName(self, 'Save crypted text', os.getcwd(), 'All files (*.*)')
-        #     wildcard = '*.*'
+        f = wx.FileDialog(self, message='Save crypted text', defaultDir=os.getcwd(), wildcard=wildcard, style=wx.FD_SAVE)
+        r = f.ShowModal()
+        if r != 5100: return
+        path = f.GetPath()
+        if not path: return
 
-        # f = wx.FileDialog(self, message='Save crypted text', defaultDir=os.getcwd(), wildcard=wildcard)
-        # r = f.ShowModal()
-        # if not r: return
-        # path = f.GetPath()
-        # if not path: return
+        # Save password.
+        pwd = self.linePasswordL.GetValue()
+        # Text from rigth side.
+        txt = self.rightText.GetValue()
+        # File extension.
+        if not os.path.splitext(path)[1]:
+            path += wildcard[1:]
 
-        # # Save password.
-        # pwd = self.linePasswordL.GetValue()
-        # # Text from rigth side.
-        # txt = self.rightText.GetValue()
-        # # File extension.
-        # if not os.path.splitext(path)[1]:
-        #     path += wildcard[1:]
-
-        # # For PNG files.
-        # if wildcard=='*.png':
-        #     self.SE.toImage(txt, pre, enc, post, pwd, path, encrypt=False)
-        # else:
-        #     open(path, 'w').write(txt)
+        # For PNG files.
+        if wildcard=='*.png':
+            self.SE.toImage(txt, pre, enc, post, pwd, path, encrypt=False)
+        else:
+            open(path, 'w').write(txt)
 
 
     def onLoad(self, e):
 
-        pass
+        f = wx.FileDialog(self, message='Save crypted text', defaultDir=os.getcwd())
+        r = f.ShowModal()
+        if r != 5100: return
+        path = f.GetPath()
+        if not path: return
+
+        # Import the text from file, without decryption.
+        val = self.SE._import(pre=None, enc=None, post=None, pwd=None, fpath=path, decrypt=False)
+
+        if val:
+            # For step 1.
+            self.preProcess.SetValue( self.SE.post )
+            self.postDecrypt.SetValue( self.SE.pre )
+            # For step 2.
+            self.comboCrypt.SetValue( self.SE.enc )
+            self.comboDecrypt.SetValue( self.SE.enc )
+            # For step 3.
+            self.postProcess.SetValue( self.SE.pre )
+            self.preDecrypt.SetValue( self.SE.post )
+
+            self.rightText.SetValue(val.encode())
+            self.onDecryptMode(None)
+            self.onRightTextChanged(None)
+            self.rightText.SetFocus()
 
 
     def onHelp(self, e):
